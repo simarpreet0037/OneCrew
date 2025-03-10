@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2>Uploaded Data List</h2>
+<table>
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Passport No</th>
+            <th>Gender</th>
+            <th>Date of Birth</th>
+            <!-- Add more columns as needed -->
+        </tr>
+    </thead>
+    <tbody>
+        {% for employee in employees %}
+        <tr>
+            <td>{{ employee.name }}</td>
+            <td>{{ employee.passport_no }}</td>
+            <td>{{ employee.gender }}</td>
+            <td>{{ employee.date_of_birth }}</td>
+            <!-- Add more columns as needed -->
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}
