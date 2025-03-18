@@ -1,36 +1,147 @@
 {% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Dashboard - EMSS{% endblock %}
 
 {% block content %}
-<div class="col-xl-12 col-lg-12 col-md-12 col-sm-12 col-12">
-    <div class="row gutters">
-        <div class="col-xl-6 col-lg-6 col-md-6 col-sm-6 col-12">
-            <div class="card">
-                <div class="card-header">
-                    <div class="card-title">Manning Summary</div>
+<h1 class="page-title">Dashboard</h1>
+
+
+
+<div class="dashboard-cards">
+    <div class="card">
+        <div class="card-icon green">
+            <i class="fas fa-clipboard-list"></i>
+        </div>
+        <div class="card-content">
+            <h3>Work Order</h3>
+            <p class="card-value">{{ closed_wo|default:"127"}}</p>
+        </div>
+    </div>
+    
+    <div class="card">
+        <div class="card-icon red">
+            <i class="fas fa-users"></i>
+        </div>
+        <div class="card-content">
+            <h3>Loading...</h3>
+            <p class="card-value">{{ Loading...|default:" " }}</p>
+        </div>
+    </div>
+    
+    <div class="card">
+        <div class="card-icon orange">
+            <i class="fas fa-clipboard-check"></i>
+        </div>
+        <div class="card-content">
+            <h3>Loading...</h3>
+            <p class="card-value">{{ Loading...|default:" " }}</p>
+        </div>
+    </div>
+    
+    <div class="card">
+        <div class="card-icon blue">
+            <i class="fas fa-clipboard"></i>
+        </div>
+        <div class="card-content">
+            <h3>Loading...</h3>
+            <p class="card-value">{{  Loading...|default:" "}}</p>
+        </div>
+    </div>
+    
+    <div class="card">
+        <div class="card-icon green">
+            <i class="fas fa-chart-line"></i>
+        </div>
+        <div class="card-content">
+            <h3>Loading... </h3>
+            <p class="card-value">{{ Loading...|default:" "  }}</p>
+        </div>
+    </div>
+</div>
+
+<div class="dashboard-content">
+    <div class="workorder-summary">
+        <h2>WorkOrder Summary</h2>
+        <div class="filter-container">
+            <div class="date-range">
+                <div class="date-field">
+                    <label for="from-date">From:</label>
+                    {% comment %} <input type="date" id="from-date" class="date-input" placeholder="dd-mm-yyyy">
+                    <button class="calendar-btn"><i class="fas fa-calendar"></i></button> {% endcomment %}
+                    <input class="date-input" type="date" id="from_workorder" name="from_workorder" value="{{ from_workorder|date:'Y-m-d' }}">
                 </div>
-                <div class="card-body">
-                    <form method="post" action="{% url 'manning_summary' %}">
-                        {% csrf_token %}
-                        <div class="form-group">
-                            <label for="projects">Projects</label>
-                            <select name="projects" id="projects" multiple>
-                                {% for project in projects %}
-                                    <option value="{{ project.ProjectId }}">{{ project.ProjectName }}</option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label for="jobs">Job Title</label>
-                            <select name="jobs" id="jobs" multiple>
-                                {% for job in jobs %}
-                                    <option value="{{ job.JobId }}">{{ job.JobName }}</option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                        <button type="submit" class="btn btn-primary">Filter</button>
-                    </form>
+                
+                <div class="date-field">
+                    <label for="to-date">To:</label>
+                    {% comment %} <input type="date" id="to-date" class="date-input" placeholder="dd-mm-yyyy">
+                    <button class="calendar-btn"><i class="fas fa-calendar"></i></button> {% endcomment %}
+                    <input class="date-input" type="date" id="to_workorder" name="to_workorder" value="{{ to_workorder|date:'Y-m-d' }}">
                 </div>
             </div>
+            
+            <div class="camp-filter">
+                <label for="camp-select">Camp:</label>
+                <select id="camp-select" class="camp-select">
+                    <option>&lt; Select Camp &gt;</option>
+                    {% for camp in camps %}
+                        <option value="{{ camp.id }}">{{ camp.name }}</option>
+                    {% endfor %}
+                </select>
+                <button class="filter-btn">Filter</button>
+            </div>
+        </div>
+        
+        <div class="workorder-table">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Value</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Open Work Orders</td>
+                        <td>{{ open_work_orders }}</td>
+                    </tr>
+                    <tr>
+                        <td>Closed in same day</td>
+                        <td>{{ closed_same_day }}</td>
+                    </tr>
+                    <tr>
+                        <td>Closed in 1 day</td>
+                        <td>{{ closed_in_1_day }}</td>
+                    </tr>
+                    <tr>
+                        <td>Closed in 2 days</td>
+                        <td>{{ closed_in_2_days }}</td>
+                    </tr>
+                    <tr>
+                        <td>Closed in 3 days</td>
+                        <td>{{ closed_in_3_days }}</td>
+                    </tr>
+                    <tr>
+                        <td>Closed in 4 days</td>
+                        <td>{{ closed_in_4_days }}</td>
+                    </tr>
+                    <tr>
+                        <td>Closed in 5 days</td>
+                        <td>{{ closed_in_5_days }}</td>
+                    </tr>
+                    <tr>
+                        <td>Closed in more than 5 days</td>
+                        <td>{{ closed_in_more_than_5_days }}</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    
+    <div class="workorder-chart">
+        <h2>WorkOrder Summary Chart</h2>
+        <div class="chart-container">
+            <canvas id="workOrderChart"></canvas>
         </div>
     </div>
 </div>
