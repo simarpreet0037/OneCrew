@@ -1,19 +1,153 @@
+{% load static %}
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>{% block title %}My Site{% endblock %}</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}EM Software{% endblock %}</title>
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    {% block extra_css %}{% endblock %}
+    <style>
+        /* Add this style to fix the logout button at the bottom */
+        .sidebar {
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+        .nav-menu {
+            flex: 1;
+        }
+        .logout-container {
+            padding: 15px;
+            border-top: 1px solid #eee;
+            background-color: #f9f9f9;
+        }
+        .logout-btn {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            color: #e74c3c;
+            text-decoration: none;
+            font-weight: bold;
+        }
+        .logout-btn i {
+            margin-right: 10px;
+        }
+    </style>
 </head>
 <body>
-    <header>
-        <h1>Header Section</h1>
-    </header>
-
-    <main>
-        {% block content %}{% endblock %}
-    </main>
-
-    <footer>
-        <p>Footer Section</p>
-    </footer>
+    <div class="container">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div class="logo-container">
+                <h1 class="logo">EM Software</h1>
+                <button class="menu-toggle">
+                    <i class="fas fa-bars"></i>
+                </button>
+            </div>
+            
+            <div class="quick-links">
+                <h2>Quick Links</h2>
+                <div class="quick-link-buttons">
+                    <a href="#" class="quick-link-btn blue"><i class="far fa-comments"></i></a>
+                    <a href="#" class="quick-link-btn light-blue"><i class="fas fa-user"></i></a>
+                    <a href="#" class="quick-link-btn red"><i class="fas fa-cog"></i></a>
+                    <a href="#" class="quick-link-btn orange"><i class="fas fa-bell"></i></a>
+                </div>
+            </div>
+            
+            <div class="nav-menu">
+                <ul>
+                    <li class="nav-item">
+                        <a href="{% url 'dashboard' %}">
+                            <i class="fas fa-home"></i>
+                            Dashboard
+                            <i class="fas fa-chevron-right toggle-icon"></i>
+                        </a>
+                        <ul class="submenu">
+                            <li><a href="{% url 'dashboard' %}"><i class="fas fa-angle-right"></i> Dashboard</a></li>
+                        </ul>
+                    </li>
+                    <li class="nav-item">
+                        <a href="{% url 'job-master' %}">
+                            <i class="fas fa-user-plus"></i>
+                            Recruitment
+                            <i class="fas fa-chevron-right toggle-icon"></i>
+                        </a>
+                        <ul class="submenu">
+                            <li><a href=""><i class="fas fa-angle-right"></i> Job Master</a></li>
+                            <li><a href=""><i class="fas fa-angle-right"></i> Manage Employee</a></li>
+                            <li><a href=""><i class="fas fa-angle-right"></i> Current Status</a></li>
+                            <li><a href=""><i class="fas fa-angle-right"></i> Recruitment Summary</a></li>
+                        </ul>
+                    </li>
+                    <li class="nav-item">
+                        <a href="">
+                            <i class="fas fa-tools"></i>
+                            Facilities
+                            <i class="fas fa-chevron-right toggle-icon"></i>
+                        </a>
+                        <ul class="submenu">
+                            {% comment %} <li><a href=""><i class="fas fa-angle-right"></i> Work Order Management</a></li> {% endcomment %}
+                            <li><a href=""><i class="fas fa-angle-right"></i> Work Order Management</a></li>
+                        </ul>
+                    </li>
+                    <li class="nav-item">
+                        <a href="">
+                            <i class="fas fa-edit"></i>
+                            New Hire Management
+                            <i class="fas fa-chevron-right toggle-icon"></i>
+                        </a>
+                        <ul class="submenu">
+                            <li><a href=""><i class="fas fa-angle-right"></i> Add New Hire</a></li>
+                            <li><a href=""><i class="fas fa-angle-right"></i> Excel Upload</a></li>
+                            <li><a href=""><i class="fas fa-angle-right"></i> New Hire Report</a></li>
+                            <li><a href=""><i class="fas fa-angle-right"></i> Update Work Status</a></li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+            
+            <!-- Logout Button Fixed at Bottom -->
+            <div class="logout-container">
+                <a href="" class="logout-btn">
+                    <i class="fas fa-sign-out-alt"></i>
+                    Logout
+                </a>
+            </div>
+        </div>
+        
+        <!-- Main Content -->
+        <div class="main-content">
+            <div class="top-bar">
+                <div class="search-bar">
+                    <input type="text" placeholder="Search here...">
+                    <button><i class="fas fa-search"></i></button>
+                </div>
+                <div class="user-actions">
+                    <a href="#" class="icon-btn"><i class="far fa-calendar"></i></a>
+                    <a href="#" class="icon-btn"><i class="fas fa-shopping-cart"></i><span class="badge">0</span></a>
+                    <a href="#" class="icon-btn"><i class="far fa-bell"></i><span class="badge">2</span></a>
+                    <a href="#" class="user-profile">
+                        <img src="{% static 'img/Default.jpg' %}" alt="User Profile">
+                    </a>
+                    <a href="" class="logout-btn">
+                        <i class="fas fa-sign-out-alt"></i>
+                    </a>
+                </div>
+            </div>
+            
+            <div class="content-body">
+                {% block content %}{% endblock %}
+            </div>
+        </div>
+    </div>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <script src="{% static 'js/main.js' %}"></script>
+    {% block extra_js %}{% endblock %}
 </body>
 </html>
+
+
