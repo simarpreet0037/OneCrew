@@ -44,3 +44,10 @@ def work_order_summary(request):
         }
         return render(request, 'work_order_summary.html', context)
     return render(request, 'work_order_summary.html')
+
+#regstraton
+
+from django.shortcuts import render
+
+# Create your views here.
+
