@@ -270,17 +270,51 @@ class DashboardView(View):
         }
         
         return chart_data
-def manning_summary(request):
-    if request.method == 'POST':
-        project_ids = request.POST.getlist('projects')
-        job_ids = request.POST.getlist('jobs')
 
-        manning_reports = ManningReport.objects.filter(ProjectName__in=project_ids, JobName__in=job_ids)
+class NewHireReport(View):
+    def get(self, request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return redirect('login')
+        
+        work_status_data = NewHire.objects.values('work_status')\
+            .annotate(count=Count('work_status'))\
+            .order_by('work_status')
+        
+        # Convert queryset to a format suitable for template and chart
+        status_labels = []
+        status_counts = []
+        table_data = []
+        
+        for item in work_status_data:
+            status = item['work_status'] if item['work_status'] else 'null'
+            count = item['count']
+            
+            status_labels.append(status)
+            status_counts.append(count)
+            table_data.append({
+                'status': status,
+                'count': count
+            })
+        
+        companies = NewHire.objects.values_list('work_company_name', flat=True).distinct()
+        
+        projects_list = ProjectMaster.objects.annotate(
+            total_arrived=Count('employees', filter=Q(employees__ArrivalStatus='Arrived'), distinct=True)
+        )
+
         context = {
-            'manning_reports': manning_reports,
+            'projects_names': projects_list,
+            'work_status_data': table_data,
+            'status_labels': status_labels,
+            'status_counts': status_counts,
+            'companies': companies,
+            'start_date': '',
+            'end_date': '',
+            'selected_company': 'All'
         }
-        return render(request, 'manning_summary.html', context)
-    return render(request, 'manning_summary.html')
+        
+        return render(request, "new_hire_report.html", context)
+
 
 def work_order_summary(request):
     if request.method == 'POST':
@@ -298,12 +332,7 @@ def work_order_summary(request):
 
 #Merge here from Views file
 
-from django.shortcuts import render, redirect
-from django.contrib import messages
-from .forms import BulkUploadEmployeeForm
-from .models import Employee
-import pandas as pd
-from io import BytesIO
+
 
 def bulk_upload_employee(request):
     if request.method == 'POST':
