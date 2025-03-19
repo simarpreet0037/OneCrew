@@ -1,0 +1,51 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/current_status_master.css' %}">
+{% endblock %}
+
+{% block content %}
+<h1 class="page-title">Current Status Master</h1>
+    <div class="list-container">
+        <div class="list-header">
+            <h3>CurrentStatus List</h3>
+            <a href="" class="btn-new">New CurrentStatus</a>
+        </div>
+
+        <div class="table-container">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>S.No</th>
+                        <th>Edit</th>
+                        <th>View</th>
+                        <th>CurrentStatusName</th>
+                        <th>CreatedBy</th>
+                        <th>Date</th>
+                        <th>Delete</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if currentstatus_list %}
+                        {% for status in currentstatus_list %}
+                        <tr>
+                            <td>{{ forloop.counter }}</td>
+                            <td><a href="" class="action-link">Edit</a></td>
+                            <td><a href="" class="action-link">View</a></td>
+                            <td>{{ status.name }}</td>
+                            <td>{{ status.created_by }}</td>
+                            <td>{{ status.created_date|date:"d-m-Y" }}</td>
+                            <td><a href="" class="action-link delete">Delete</a></td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="7" class="no-records">No records to display.</td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+{% endblock %}

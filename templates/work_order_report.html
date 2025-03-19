@@ -1,0 +1,176 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Work Order Report - EM Software{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/work-order-report.css' %}">
+{% endblock %}
+
+{% block content %}
+<h1 class="page-title">Work Order Report</h1>
+
+<div class="filter-options">
+    <div class="filter-option">
+        <label for="camp">Camp:</label>
+        <select id="camp" name="camp" class="camp-select">
+            <option value="">--Select Camp--</option>
+            {% for camp in camps %}
+                <option value="{{ camp.id }}" {% if selected_camp == camp.id %}selected{% endif %}>{{ camp.name }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="filter-option">
+        <label for="from_date">From:</label>
+        <input type="date" id="from_date" name="from_date" value="{{ from_date|date:'Y-m-d' }}">
+    </div>
+    <div class="filter-option">
+        <label for="to_date">To:</label>
+        <input type="date" id="to_date" name="to_date" value="{{ to_date|date:'Y-m-d' }}">
+    </div>
+    <button type="button" class="filter-btn" id="filterBtn">Filter</button>
+</div>
+
+<div class="work-order-report">
+    <div class="report-table">
+        <table>
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Value</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Open Work Orders:</td>
+                    <td>{{ open_work_orders|default:"0" }}</td>
+                </tr>
+                <tr>
+                    <td>Closed in same day:</td>
+                    <td>{{ closed_same_day|default:"0" }}</td>
+                </tr>
+                <tr>
+                    <td>Closed in 1 day:</td>
+                    <td>{{ closed_one_day|default:"0" }}</td>
+                </tr>
+                <tr>
+                    <td>Closed in 2 day:</td>
+                    <td>{{ closed_two_day|default:"0" }}</td>
+                </tr>
+                <tr>
+                    <td>Closed in 3 day:</td>
+                    <td>{{ closed_three_day|default:"0" }}</td>
+                </tr>
+                <tr>
+                    <td>Closed in 4 day:</td>
+                    <td>{{ closed_four_day|default:"0" }}</td>
+                </tr>
+                <tr>
+                    <td>Closed in 5 day:</td>
+                    <td>{{ closed_five_day|default:"0" }}</td>
+                </tr>
+                <tr>
+                    <td>Closed in more than 5 day:</td>
+                    <td>{{ closed_more_than_five|default:"0" }}</td>
+                </tr>
+                <tr>
+                    <td>Total Work Orders:</td>
+                    <td>{{ total_work_orders|default:"0" }}</td>
+                </tr>
+                <tr>
+                    <td>Completion Rate:</td>
+                    <td>{{ completion_rate|default:"0" }}</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    
+    <div class="chart-container">
+        <h2>Work Order Summary</h2>
+        <div>
+            <canvas id="workOrderChart"></canvas>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.7.0/chart.min.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Filter functionality
+        const filterBtn = document.getElementById('filterBtn');
+        if (filterBtn) {
+            filterBtn.addEventListener('click', function() {
+                const camp = document.getElementById('camp').value;
+                const fromDate = document.getElementById('from_date').value;
+                const toDate = document.getElementById('to_date').value;
+                
+                // Redirect with filter parameters
+                window.location.href = "{% url 'work-order' %}?camp=" + camp + "&from_date=" + fromDate + "&to_date=" + toDate;
+            });
+        }
+        
+        // Work Order Summary Chart
+        const ctx = document.getElementById('workOrderChart').getContext('2d');
+        const workOrderChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: ['Open', 'Same Day', '1 Day', '2 Days', '3 Days', '4 Days', '5 Days', '5+ Days'],
+                datasets: [{
+                    label: 'Work Orders',
+                    data: [
+                        {{ open_work_orders|default:"0" }}, 
+                        {{ closed_same_day|default:"0" }}, 
+                        {{ closed_one_day|default:"0" }},
+                        {{ closed_two_day|default:"0" }},
+                        {{ closed_three_day|default:"0" }},
+                        {{ closed_four_day|default:"0" }},
+                        {{ closed_five_day|default:"0" }},
+                        {{ closed_more_than_five|default:"0" }}
+                    ],
+                    backgroundColor: [
+                        'rgba(54, 162, 235, 0.6)', // Changed colors to match more blue theme
+                        'rgba(54, 162, 235, 0.6)',
+                        'rgba(54, 162, 235, 0.6)',
+                        'rgba(54, 162, 235, 0.6)',
+                        'rgba(54, 162, 235, 0.6)',
+                        'rgba(54, 162, 235, 0.6)',
+                        'rgba(54, 162, 235, 0.6)',
+                        'rgba(54, 162, 235, 0.6)'
+                    ],
+                    borderColor: [
+                        'rgba(54, 162, 235, 1)',
+                        'rgba(54, 162, 235, 1)',
+                        'rgba(54, 162, 235, 1)',
+                        'rgba(54, 162, 235, 1)',
+                        'rgba(54, 162, 235, 1)',
+                        'rgba(54, 162, 235, 1)',
+                        'rgba(54, 162, 235, 1)',
+                        'rgba(54, 162, 235, 1)'
+                    ],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            precision: 0
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                }
+            }
+        });
+    });
+</script>
+{% endblock %}
+
