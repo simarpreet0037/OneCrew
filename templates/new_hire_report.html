@@ -1,0 +1,95 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/new_hire_report.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="main-content">
+    <h1 class="page-title">New Hire Summary</h1>
+    
+    <div class="report-container">
+        <h2>NewHire Report</h2>
+        
+        <form method="post" action="{% url 'new-hire-report' %}">
+            {% csrf_token %}
+            <div class="filter-section">
+                <div class="filter-row">
+                    <div class="filter-group">
+                        <label>Projects</label>
+                        <div class="select-container">
+                            {% comment %} <select class="form-control">
+                                <option>All Projects</option>
+                            </select> {% endcomment %}
+                            <select id="projects" name="projects" class="form-control">
+                                <option value="all" selected>All Projects</option>
+                                {% if projects_names %}
+                                    {% for project in projects_names %}
+                                        <option value={{project.project_id}}>{{ project.project_name }}</option>
+                                    {% endfor %}
+                                {% else %}
+                                {% endif %}
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="filter-group">
+                        <label>Arrival From</label>
+                        <input class="input_date" type="date" id="arrival_from" name="arrival_from" value="{{ arrival_from|date:'Y-m-d' }}">
+                    </div>
+                    
+                    <div class="filter-group">
+                        <label>Arrival To</label>
+                        <input class="input_date" type="date" id="arrival_to" name="arrival_to" value="{{ arrival_to|date:'Y-m-d' }}">
+                    </div>
+                </div>
+                
+                <div class="button-group">
+                    <button type="submit" class="btn btn-primary">Filter</button>
+                    <button type="submit" formaction="{% url 'export-recruitment-summary' %}"  class="btn btn-secondary">Export</button>
+                </div>
+            </div>
+        </form>
+        <div class="results-section">
+            <div class="table-container">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Work Status</th>
+                            <th>Count</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Not Assigned</td>
+                            <td>99</td>
+                        </tr>
+                        <tr>
+                            <td>null</td>
+                            <td>1</td>
+                        </tr>
+                        <tr>
+                            <td>Inactive</td>
+                            <td>2189</td>
+                        </tr>
+                        <tr>
+                            <td>Assigned</td>
+                            <td>2549</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            
+            <div class="chart-container">
+                <h3>New Hire Summary</h3>
+                <div class="chart">
+                    <!-- This would be replaced with your chart implementation -->
+                    <!-- You can use Chart.js or any other library you prefer -->
+                    <canvas id="newHireChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}  
