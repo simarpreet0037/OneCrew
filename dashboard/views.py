@@ -1,7 +1,12 @@
 # views.py
 from django.shortcuts import render
-from django.db.models import Count, Sum
+from django.contrib.auth import authenticate, login, logout
+from django.utils import timezone
+from django.core.paginator import Paginator
+from django.db.models import Count, Q
+from datetime import datetime, timedelta
 from django.views import View
+from django.db import models
 from .models import ProjectMaster, JobMaster, Employee, NewHire, WorkOrder, User
 
 class LoginView(View):
@@ -270,30 +275,51 @@ class DashboardView(View):
         }
         
         return chart_data
-def manning_summary(request):
-    if request.method == 'POST':
-        project_ids = request.POST.getlist('projects')
-        job_ids = request.POST.getlist('jobs')
+    
+class WorkOrderReportView(View):
+    """
+    View for the work order report page
+    """
+    def get(self, request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return redirect('login')
+        
+        camp_id = request.GET.get('camp', '')
+        from_date_str = request.GET.get('from_date', '')
+        to_date_str = request.GET.get('to_date', '')
 
-        manning_reports = ManningReport.objects.filter(ProjectName__in=project_ids, JobName__in=job_ids)
-        context = {
-            'manning_reports': manning_reports,
+        today = timezone.now().date()
+        from_date = datetime.datetime.strptime(from_date_str, '%Y-%m-%d').date() if from_date_str else today - timedelta(days=30)
+        to_date = datetime.datetime.strptime(to_date_str, '%Y-%m-%d').date() if to_date_str else today
+
+        work_order_data = {
+            'open_work_orders': 0,
+            'closed_same_day': 0,
+            'closed_one_day': 0,
+            'closed_two_day': 0,
+            'closed_three_day': 0,
+            'closed_four_day': 0,
+            'closed_five_day': 0,
+            'closed_more_than_five': 0,
+            'total_work_orders': 0,
+            'completion_rate': 0,
         }
-        return render(request, 'manning_summary.html', context)
-    return render(request, 'manning_summary.html')
 
-def work_order_summary(request):
-    if request.method == 'POST':
-        camp_ids = request.POST.getlist('camps')
-        from_date = request.POST.get('from_date')
-        to_date = request.POST.get('to_date')
+        camps = [
+            {'id': 1, 'name': 'Camp A'},
+            {'id': 2, 'name': 'Camp B'},
+            {'id': 3, 'name': 'Camp C'},
+        ]
 
-        work_orders = WorkOrder.objects.filter(CampId__in=camp_ids, Date__range=[from_date, to_date])
         context = {
-            'work_orders': work_orders,
+            'camps': camps,
+            'selected_camp': camp_id,
+            'from_date': from_date,
+            'to_date': to_date,
+            **work_order_data
         }
-        return render(request, 'work_order_summary.html', context)
-    return render(request, 'work_order_summary.html')
+
+        return render(request, 'work_order_report.html', context)
 
 
 #Merge here from Views file
@@ -397,3 +423,30 @@ def uploaded_data_list(request):
     employees = Employee.objects.all()
     return render(request, 'recruitment/uploaded_data_list.html', {'employees': employees})
 
+
+class RecruitmentView(View):
+    def get(self, request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return redirect('login')
+        
+        job_list = JobMaster.objects.all().order_by('job_id')
+    
+        # Set up pagination
+        page_size = request.GET.get('page_size', 10)
+        paginator = Paginator(job_list, page_size)
+        page_number = request.GET.get('page', 1)
+        page_obj = paginator.get_page(page_number)
+        
+        # Generate page range for display
+        page_range = range(1, paginator.num_pages + 1)
+        
+        context = {
+            'jobs': page_obj,
+            'paginator': paginator,
+            'page_obj': page_obj,
+            'page_range': page_range,
+            'page_size': int(page_size),
+            'total_pages': paginator.num_pages,
+        }
+        
+        return render(request, 'job_master.html', context)
