@@ -1,0 +1,93 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/new_hire_excel_upload.css' %}">
+{% endblock %}
+
+{% block content %}
+<h1 class="page-title">Bulk Upload New Hire</h1>
+
+    <div class="upload-container1">
+        {% if error_message %}
+        <div class="error-message1">
+            <p>{{ error_message }}</p>
+        </div>
+        {% endif %}
+
+        <div class="upload-section">
+            <!-- Download section first -->
+            <div class="download-section">
+                <span>Download Excel Format</span>
+                <a href="{% url 'download-new-hire-excel' %}" class="download-btn">Download</a>
+            </div>
+
+            <!-- File upload form below -->
+            <div class="excel-form">
+                <form method="post" action="{% url 'excel-upload-new-hire-management' %}" enctype="multipart/form-data" class="upload-form">
+                    {% csrf_token %}
+                    <div class="file-selection">
+                        <label for="excel_file">Select a Valid Excel File To Upload :</label>
+                        <input type="file" name="excel_file" id="excel_file" accept=".xlsx, .xls">
+                    </div>
+                    
+                    <div class="form-actions">
+                        <div class="employee-select">
+                            <select name="employee_type" class="employee-dropdown">
+                                <option value="">New Employee</option>
+                                <!-- Add other options as needed -->
+                            </select>
+                        </div>
+                        <button type="submit" class="bulk-upload-btn">Bulk Upload</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        {% if invalid_data %}
+        <div class="invalid-data">
+            <p class="invalid-data-title">These Are Invalid Data List Or Not Found :</p>
+        </div>
+        {% endif %}
+
+        <div class="data-table">
+            <h3>Uploaded Data List</h3>
+            <table class="uploaded-data-table">
+                <thead>
+                    <tr>
+                        <th>S.No</th>
+                        <th>ControlNo</th>
+                        <th>PoolNo</th>
+                        <th>PassportNo</th>
+                        <th>Employee Name</th>
+                        <th>Work Company Name</th>
+                        <th>Arrived Salary</th>
+                        <th>Native Language</th>
+                        <th>Education</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if uploaded_data %}
+                        {% for item in uploaded_data %}
+                        <tr>
+                            <td>{{ forloop.counter }}</td>
+                            <td>{{ item.employee_id.ControlNo }}</td>
+                            <td>{{ item.employee_id.PoolNo }}</td>
+                            <td>{{ item.employee_id.PassportNo }}</td>
+                            <td>{{ item.employee_id.Name }}</td>
+                            <td>{{ item.work_company_name }}</td>
+                            <td>{{ item.employee_id.arrived_salary }}</td>
+                            <td>{{ item.native_language }}</td>
+                            <td>{{ item.education }}</td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="9">No records to display.</td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+{% endblock %}
