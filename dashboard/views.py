@@ -382,6 +382,11 @@ class NewHireReport(View):
         
         return render(request, "new_hire_report.html", context)
 
+class UpdateNewHireWorkStatusView(View):
+    def get(self, request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return redirect('login')
+        return render(request, "update_work_status.html")
 
 def work_order_summary(request):
     if request.method == 'POST':
