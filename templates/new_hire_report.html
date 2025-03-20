@@ -93,3 +93,43 @@
     </div>
 </div>
 {% endblock %}  
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const ctx = document.getElementById('newHireChart').getContext('2d');
+        const newHireChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: ['Not Assigned', 'null', 'Inactive', 'Assigned'],
+                datasets: [{
+                    label: 'Total Hire',
+                    data: [99, 1, 2189, 2549],
+                    backgroundColor: 'rgba(0, 0, 255, 0.8)',
+                    borderColor: 'rgba(0, 0, 255, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Total Hire'
+                        }
+                    },
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Work Status'
+                        }
+                    }
+                }
+            }
+        });
+    });
+</script>
+{% endblock %}
