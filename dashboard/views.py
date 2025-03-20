@@ -315,6 +315,73 @@ class NewHireReport(View):
         
         return render(request, "new_hire_report.html", context)
 
+    def post(self, request):
+        # Get filter parameters
+        start_date = request.POST.get('arrival_from', '')
+        end_date = request.POST.get('arrival_to', '')
+        company = request.POST.get('company', 'All')
+        export_format = request.POST.get('export', None)
+        
+        # Start with all records
+        queryset = NewHire.objects.all()
+        
+        # Apply filters if provided
+        # if start_date:
+        #     # Assuming you have a field for arrival date in your model
+        #     # If not, you may need to adjust this filter
+        #     queryset = queryset.filter(created_at__gte=start_date)
+        
+        # if end_date:
+        #     queryset = queryset.filter(created_at__lte=end_date)
+        
+        if company and company != 'All':
+            queryset = queryset.filter(work_company_name=company)
+        
+        # Get work status counts with applied filters
+        work_status_data = queryset.values('work_status')\
+            .annotate(count=Count('work_status'))\
+            .order_by('work_status')
+        
+        # Convert queryset to a format suitable for template and chart
+        status_labels = []
+        status_counts = []
+        table_data = []
+        
+        for item in work_status_data:
+            status = item['work_status'] if item['work_status'] else 'null'
+            count = item['count']
+            
+            status_labels.append(status)
+            status_counts.append(count)
+            table_data.append({
+                'status': status,
+                'count': count
+            })
+        
+        # Handle export if requested
+        if export_format == 'csv':
+            return self.export_to_csv(table_data)
+        
+        # Get unique company names for the dropdown
+        companies = NewHire.objects.values_list('work_company_name', flat=True).distinct()
+        
+        projects_list = ProjectMaster.objects.annotate(
+            total_arrived=Count('employees', filter=Q(employees__ArrivalStatus='Arrived'), distinct=True)
+        )
+
+        context = {
+            'projects_names': projects_list,
+            'work_status_data': table_data,
+            'status_labels': status_labels,
+            'status_counts': status_counts,
+            'companies': companies,
+            'start_date': start_date,
+            'end_date': end_date,
+            'selected_company': company
+        }
+        
+        return render(request, "new_hire_report.html", context)
+
 
 def work_order_summary(request):
     if request.method == 'POST':
