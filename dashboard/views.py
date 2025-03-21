@@ -485,4 +485,56 @@ class BulkUploadWorkOrderView(View):
         
         return render(request, 'workorder_bulk_upload.html', context)
 
-
+class DownloadWorkOrderExcelView(View):
+    def get(self, request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return redirect('login')
+        
+        # Fetch the latest 20 work orders
+        work_orders = WorkOrder.objects.all().order_by('-wo_id')[:20]
+        
+        # Create a workbook and worksheet
+        workbook = Workbook()
+        worksheet = workbook.active
+        worksheet.title = "Work Orders"
+        
+        # Define headers from model fields
+        headers = [
+            'wo_id', 'wo_numeric_no', 'wo_no', 'employee_id', 'phone_no',
+            'camp_id', 'camp_name', 'building_id', 'project_id', 'building_code',
+            'apartment_id', 'apt_area', 'work_order_job_type_id', 'wo_description',
+            'requested_date', 'submitted_date', 'status', 'status_date',
+            'days_taken', 'remarks', 'created_at', 'updated_at'
+        ]
+        
+        # Add headers to worksheet
+        for col_num, header in enumerate(headers, 1):
+            worksheet.cell(row=1, column=col_num, value=header)
+        
+        # Populate work order data
+        for row_num, work_order in enumerate(work_orders, 2):
+            data = [
+                work_order.wo_id, work_order.wo_numeric_no, work_order.wo_no,
+                work_order.employee_id, work_order.phone_no, work_order.camp_id,
+                work_order.camp_name, work_order.building_id, work_order.project_id,
+                work_order.building_code, work_order.apartment_id, work_order.apt_area,
+                work_order.work_order_job_type_id, work_order.wo_description,
+                work_order.requested_date, work_order.submitted_date, work_order.status,
+                work_order.status_date, work_order.days_taken, work_order.remarks,
+                work_order.created_at.replace(tzinfo=None) if work_order.created_at else None,
+                work_order.updated_at.replace(tzinfo=None) if work_order.updated_at else None
+            ]
+            
+            for col_num, value in enumerate(data, 1):
+                worksheet.cell(row=row_num, column=col_num, value=value)
+        
+        # Create HTTP response
+        response = HttpResponse(
+            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+        response['Content-Disposition'] = 'attachment; filename=work_order_data.xlsx'
+        
+        # Save workbook to response
+        workbook.save(response)
+        
+        return response
