@@ -4,11 +4,18 @@ from django.contrib.auth import authenticate, login, logout
 from django.utils import timezone
 from django.core.paginator import Paginator
 from django.db.models import Count, Q
+from django.http import JsonResponse, HttpResponse
 from datetime import datetime, timedelta
 from django.views import View
 from django.db import models
 from .models import ProjectMaster, JobMaster, Employee, NewHire, WorkOrder, User
+from .forms import EmployeeUploadForm
+from openpyxl import Workbook
 import pandas as pd
+import io
+import xlsxwriter
+import datetime
+import random
 
 class LoginView(View):
     def get(self, request, *args, **kwargs):
@@ -962,3 +969,176 @@ class CurrentStatusView(View):
         return render(request, 'current_status_master.html', {
             'currentstatus_list': currentstatus_list
         })
+
+class NewHireManagementView(View):
+    def get(self, request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return redirect('login')
+        
+        # Handle search/filter parameters
+        search_by = request.GET.get('search_by', '')
+        search_term = request.GET.get('search_term', '')
+        # nationality = request.GET.get('nationality', '')
+        project_id = request.GET.get('project', '')
+        # gender = request.GET.get('gender', '')
+        work_status = request.GET.get('work_status', '')
+        
+        # Fetch new hires with filters
+        new_hires = NewHire.objects.all()
+        
+        # Apply filters based on parameters
+        if search_term and search_by:
+            if search_by == 'pool_no':
+                new_hires = new_hires.filter(pool_no__icontains=search_term)
+            elif search_by == 'name':
+                new_hires = new_hires.filter(name__icontains=search_term)
+            elif search_by == 'email':
+                new_hires = new_hires.filter(email__icontains=search_term)
+        
+        # if nationality:
+        #     new_hires = new_hires.filter(nationality=nationality)
+        
+        if project_id:
+            new_hires = new_hires.filter(project_id=project_id)
+        
+        # if gender:
+        #     new_hires = new_hires.filter(gender=gender)
+        
+        if work_status:
+            new_hires = new_hires.filter(work_status=work_status)
+        
+        # Pagination
+        paginator = Paginator(new_hires, 10)  # Show 10 records per page
+        page = request.GET.get('page')
+        new_hires = paginator.get_page(page)
+        
+        # Get all projects for dropdown
+        projects = ProjectMaster.objects.all()
+        
+        context = {
+            'new_hires': new_hires,
+            'projects': projects,
+        }
+        
+        return render(request, 'new_hire_management.html', context)
+
+class ExcelUploadNewHireView(View):
+    def get(self, request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return redirect('login')
+        # for i in Employee.objects.all():
+        #     print(i.EmployeeId)
+        context = {
+            'uploaded_data': NewHire.objects.all().order_by('-new_hire_id')[:20],
+            'error_message': None,
+            'invalid_data': False,
+        }
+        return render(request, 'new_hire_excel_upload.html', context)
+    
+    def post(self, request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return redirect('login')
+        
+        context = {
+            'uploaded_data': [],
+            'error_message': None,
+            'invalid_data': False,
+        }
+        context['uploaded_data'] = NewHire.objects.all().order_by('-new_hire_id')[:20]
+        
+        excel_file = request.FILES['excel_file']
+
+        if not excel_file.name.endswith(('.xlsx', '.xls')):
+            context['error_message'] = "Please upload a valid Excel file."
+            return render(request, 'new_hire_excel_upload.html', context)
+        
+        try:
+            df = pd.read_excel(excel_file)
+            required_columns = {"new_hire_id", "employee_id", "work_company_name", "arrived_salary",
+                "native_language", "education", "marital_status", "religion",
+                "food_type", "home_address", "email_id", "city_of_birth",
+                "work_status", "remark", "camp_id"}
+            
+            # missing_columns = required_columns - set(df.columns)
+            # if missing_columns:
+            #     return JsonResponse({'error': f'Missing required columns: {", ".join(missing_columns)}'}, status=400)
+            
+            employees_to_create = []
+            new_hires = [
+                NewHire(
+                    # new_hire_id=row["new_hire_id"],
+                    employee_id=Employee.objects.filter(EmployeeId=int(row["employee_id"])).first(),
+                    work_company_name=row["work_company_name"],
+                    arrived_salary=row["arrived_salary"],
+                    native_language=row["native_language"],
+                    education=row["education"],
+                    marital_status=row["marital_status"],
+                    religion=row["religion"],
+                    food_type=row["food_type"],
+                    home_address=row["home_address"],
+                    email_id=row["email_id"],
+                    city_of_birth=row["city_of_birth"],
+                    work_status=row["work_status"],
+                    remark=row["remark"],
+                    camp_id=row["camp_id"]
+                )
+                for _, row in df.iterrows()
+            ]
+            
+            NewHire.objects.bulk_create(new_hires)
+            
+            context['uploaded_data'] = NewHire.objects.all().order_by('-new_hire_id')[:20]
+
+            # messages.success(request, f"Successfully uploaded {len(df)} employees.")
+            
+        except Exception as e:
+            context['error_message'] = f"Error processing file: {str(e)}"
+        
+        return render(request, 'new_hire_excel_upload.html', context)
+
+class DownloadNewHireExcelView(View):
+    def get(self, request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return redirect('login')
+        
+        # Fetch the latest 20 new hires
+        new_hires = NewHire.objects.all().order_by('-new_hire_id')[:20]
+        
+        # Create a workbook and worksheet
+        workbook = Workbook()
+        worksheet = workbook.active
+        worksheet.title = "New Hires"
+        
+        # Define headers from model fields
+        headers = [
+            'NewHireId', 'EmployeeId', 'WorkCompanyName', 'ArrivedSalary', 'NativeLanguage', 'Education',
+            'MaritalStatus', 'Religion', 'FoodType', 'HomeAddress', 'EmailId', 'CityOfBirth', 'WorkStatus',
+            'Remark', 'CampId'
+        ]
+        
+        # Add headers to worksheet
+        for col_num, header in enumerate(headers, 1):
+            worksheet.cell(row=1, column=col_num, value=header)
+        
+        # Populate new hire data
+        for row_num, new_hire in enumerate(new_hires, 2):
+            data = [
+                new_hire.new_hire_id, new_hire.employee_id.EmployeeId if new_hire.employee_id else None, 
+                new_hire.work_company_name, new_hire.arrived_salary, new_hire.native_language, new_hire.education,
+                new_hire.marital_status, new_hire.religion, new_hire.food_type, new_hire.home_address, 
+                new_hire.email_id, new_hire.city_of_birth, new_hire.work_status, new_hire.remark, new_hire.camp_id
+            ]
+            
+            for col_num, value in enumerate(data, 1):
+                worksheet.cell(row=row_num, column=col_num, value=value)
+        
+        # Create HTTP response
+        response = HttpResponse(
+            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+        response['Content-Disposition'] = 'attachment; filename=new_hire_data.xlsx'
+        
+        # Save workbook to response
+        workbook.save(response)
+        
+        return response
