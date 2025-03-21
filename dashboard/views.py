@@ -962,3 +962,56 @@ class CurrentStatusView(View):
         return render(request, 'current_status_master.html', {
             'currentstatus_list': currentstatus_list
         })
+
+class NewHireManagementView(View):
+    def get(self, request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return redirect('login')
+        
+        # Handle search/filter parameters
+        search_by = request.GET.get('search_by', '')
+        search_term = request.GET.get('search_term', '')
+        # nationality = request.GET.get('nationality', '')
+        project_id = request.GET.get('project', '')
+        # gender = request.GET.get('gender', '')
+        work_status = request.GET.get('work_status', '')
+        
+        # Fetch new hires with filters
+        new_hires = NewHire.objects.all()
+        
+        # Apply filters based on parameters
+        if search_term and search_by:
+            if search_by == 'pool_no':
+                new_hires = new_hires.filter(pool_no__icontains=search_term)
+            elif search_by == 'name':
+                new_hires = new_hires.filter(name__icontains=search_term)
+            elif search_by == 'email':
+                new_hires = new_hires.filter(email__icontains=search_term)
+        
+        # if nationality:
+        #     new_hires = new_hires.filter(nationality=nationality)
+        
+        if project_id:
+            new_hires = new_hires.filter(project_id=project_id)
+        
+        # if gender:
+        #     new_hires = new_hires.filter(gender=gender)
+        
+        if work_status:
+            new_hires = new_hires.filter(work_status=work_status)
+        
+        # Pagination
+        paginator = Paginator(new_hires, 10)  # Show 10 records per page
+        page = request.GET.get('page')
+        new_hires = paginator.get_page(page)
+        
+        # Get all projects for dropdown
+        projects = ProjectMaster.objects.all()
+        
+        context = {
+            'new_hires': new_hires,
+            'projects': projects,
+        }
+        
+        return render(request, 'new_hire_management.html', context)
+
