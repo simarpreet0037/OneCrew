@@ -4,11 +4,18 @@ from django.contrib.auth import authenticate, login, logout
 from django.utils import timezone
 from django.core.paginator import Paginator
 from django.db.models import Count, Q
+from django.http import JsonResponse, HttpResponse
 from datetime import datetime, timedelta
 from django.views import View
 from django.db import models
 from .models import ProjectMaster, JobMaster, Employee, NewHire, WorkOrder, User
+from .forms import EmployeeUploadForm
+from openpyxl import Workbook
 import pandas as pd
+import io
+import xlsxwriter
+import datetime
+import random
 
 class LoginView(View):
     def get(self, request, *args, **kwargs):
@@ -1088,3 +1095,50 @@ class ExcelUploadNewHireView(View):
             context['error_message'] = f"Error processing file: {str(e)}"
         
         return render(request, 'new_hire_excel_upload.html', context)
+
+class DownloadNewHireExcelView(View):
+    def get(self, request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return redirect('login')
+        
+        # Fetch the latest 20 new hires
+        new_hires = NewHire.objects.all().order_by('-new_hire_id')[:20]
+        
+        # Create a workbook and worksheet
+        workbook = Workbook()
+        worksheet = workbook.active
+        worksheet.title = "New Hires"
+        
+        # Define headers from model fields
+        headers = [
+            'NewHireId', 'EmployeeId', 'WorkCompanyName', 'ArrivedSalary', 'NativeLanguage', 'Education',
+            'MaritalStatus', 'Religion', 'FoodType', 'HomeAddress', 'EmailId', 'CityOfBirth', 'WorkStatus',
+            'Remark', 'CampId'
+        ]
+        
+        # Add headers to worksheet
+        for col_num, header in enumerate(headers, 1):
+            worksheet.cell(row=1, column=col_num, value=header)
+        
+        # Populate new hire data
+        for row_num, new_hire in enumerate(new_hires, 2):
+            data = [
+                new_hire.new_hire_id, new_hire.employee_id.EmployeeId if new_hire.employee_id else None, 
+                new_hire.work_company_name, new_hire.arrived_salary, new_hire.native_language, new_hire.education,
+                new_hire.marital_status, new_hire.religion, new_hire.food_type, new_hire.home_address, 
+                new_hire.email_id, new_hire.city_of_birth, new_hire.work_status, new_hire.remark, new_hire.camp_id
+            ]
+            
+            for col_num, value in enumerate(data, 1):
+                worksheet.cell(row=row_num, column=col_num, value=value)
+        
+        # Create HTTP response
+        response = HttpResponse(
+            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+        response['Content-Disposition'] = 'attachment; filename=new_hire_data.xlsx'
+        
+        # Save workbook to response
+        workbook.save(response)
+        
+        return response
