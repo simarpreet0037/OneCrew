@@ -8,6 +8,7 @@ from datetime import datetime, timedelta
 from django.views import View
 from django.db import models
 from .models import ProjectMaster, JobMaster, Employee, NewHire, WorkOrder, User
+import pandas as pd
 
 class LoginView(View):
     def get(self, request, *args, **kwargs):
@@ -275,6 +276,117 @@ class DashboardView(View):
         }
         
         return chart_data
+
+class NewHireReport(View):
+    def get(self, request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return redirect('login')
+        
+        work_status_data = NewHire.objects.values('work_status')\
+            .annotate(count=Count('work_status'))\
+            .order_by('work_status')
+        
+        # Convert queryset to a format suitable for template and chart
+        status_labels = []
+        status_counts = []
+        table_data = []
+        
+        for item in work_status_data:
+            status = item['work_status'] if item['work_status'] else 'null'
+            count = item['count']
+            
+            status_labels.append(status)
+            status_counts.append(count)
+            table_data.append({
+                'status': status,
+                'count': count
+            })
+        
+        companies = NewHire.objects.values_list('work_company_name', flat=True).distinct()
+        
+        projects_list = ProjectMaster.objects.annotate(
+            total_arrived=Count('employees', filter=Q(employees__ArrivalStatus='Arrived'), distinct=True)
+        )
+
+        context = {
+            'projects_names': projects_list,
+            'work_status_data': table_data,
+            'status_labels': status_labels,
+            'status_counts': status_counts,
+            'companies': companies,
+            'start_date': '',
+            'end_date': '',
+            'selected_company': 'All'
+        }
+        
+        return render(request, "new_hire_report.html", context)
+
+    def post(self, request):
+        # Get filter parameters
+        start_date = request.POST.get('arrival_from', '')
+        end_date = request.POST.get('arrival_to', '')
+        company = request.POST.get('company', 'All')
+        export_format = request.POST.get('export', None)
+        
+        # Start with all records
+        queryset = NewHire.objects.all()
+        
+        # Apply filters if provided
+        # if start_date:
+        #     # Assuming you have a field for arrival date in your model
+        #     # If not, you may need to adjust this filter
+        #     queryset = queryset.filter(created_at__gte=start_date)
+        
+        # if end_date:
+        #     queryset = queryset.filter(created_at__lte=end_date)
+        
+        if company and company != 'All':
+            queryset = queryset.filter(work_company_name=company)
+        
+        # Get work status counts with applied filters
+        work_status_data = queryset.values('work_status')\
+            .annotate(count=Count('work_status'))\
+            .order_by('work_status')
+        
+        # Convert queryset to a format suitable for template and chart
+        status_labels = []
+        status_counts = []
+        table_data = []
+        
+        for item in work_status_data:
+            status = item['work_status'] if item['work_status'] else 'null'
+            count = item['count']
+            
+            status_labels.append(status)
+            status_counts.append(count)
+            table_data.append({
+                'status': status,
+                'count': count
+            })
+        
+        # Handle export if requested
+        if export_format == 'csv':
+            return self.export_to_csv(table_data)
+        
+        # Get unique company names for the dropdown
+        companies = NewHire.objects.values_list('work_company_name', flat=True).distinct()
+        
+        projects_list = ProjectMaster.objects.annotate(
+            total_arrived=Count('employees', filter=Q(employees__ArrivalStatus='Arrived'), distinct=True)
+        )
+
+        context = {
+            'projects_names': projects_list,
+            'work_status_data': table_data,
+            'status_labels': status_labels,
+            'status_counts': status_counts,
+            'companies': companies,
+            'start_date': start_date,
+            'end_date': end_date,
+            'selected_company': company
+        }
+        
+        return render(request, "new_hire_report.html", context)
     
 class WorkOrderReportView(View):
     """
@@ -321,109 +433,168 @@ class WorkOrderReportView(View):
 
         return render(request, 'work_order_report.html', context)
 
+class UpdateNewHireWorkStatusView(View):
+    def get(self, request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return redirect('login')
+        return render(request, "update_work_status.html")
 
-#Merge here from Views file
+class LogoutView(View):
+    def get(self, request, *args, **kwargs):
+        logout(request)
+        messages.success(request, 'You have been successfully logged out.')
+        return redirect('login')
 
-from django.shortcuts import render, redirect
-from django.contrib import messages
-from .forms import BulkUploadEmployeeForm
-from .models import Employee
-import pandas as pd
-from io import BytesIO
+class ManageEmployeeView(View):
+    def get(self, request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return redirect('login')
+        context = {
+            'uploaded_data': Employee.objects.all().order_by('-EmployeeId')[:20],
+            'error_message': None,
+            'invalid_data': False,
+        }
+        return render(request, 'manage_employee.html', context)
 
-def bulk_upload_employee(request):
-    if request.method == 'POST':
-        form = BulkUploadEmployeeForm(request.POST, request.FILES)
-        if form.is_valid():
-            excel_file = request.FILES['excel_file']
-            upload_option = form.cleaned_data['upload_option']
-            
-            # Read the Excel file
-            df = pd.read_excel(BytesIO(excel_file.read()))
-            
-            # Process the data
-            for index, row in df.iterrows():
-                if upload_option == 'New':
-                    Employee.objects.create(
-                        authentication_id=row['AutheticationId'],
-                        pool_no=row['PoolNo'],
-                        control_no=row['ControlNo'],
-                        name=row['Name'],
-                        gender=row['Gender'],
-                        passport_no=row['PassportNo'],
-                        passport_place_of_issue=row['PassportPlaceOfIssue'],
-                        date_of_birth=row['DateOfBirth'],
-                        nationality=row['Nationality'],
-                        project=row['Project'],
-                        native_license_status=row['NativeLicenseStatus'],
-                        native_license_issue_date=row['NativeLicenseIssuedDate'],
-                        native_license_expiry_date=row['NativeLicenseExpiryDate'],
-                        kuwait_license_status=row['KuwaitLicenseStatus'],
-                        kuwait_license_issue_date=row['KuwaitLicenseIssuedDate'],
-                        kuwait_license_expiry_date=row['KuwaitLicenseExpiryDate'],
-                        operator_license_status=row['OperatorLicenseStatus'],
-                        operator_license_issue_date=row['OperatorLicenseIssuedDate'],
-                        operator_license_expiry_date=row['OperatorLicenseExpiryDate'],
-                        trade_certificate_status=row['TradeCertificateStatus'],
-                        trade_certificate_issue_date=row['TradeCertificateIssuedDate'],
-                        training_certificate_status=row['TrainingCertificateStatus'],
-                        training_certificate_issue_date=row['TrainingCertificateIssuedDate'],
-                        job_title=row['JobTitle'],
-                        pool_salary=row['PoolSalary'],
-                        assigned_salary=row['AssignedSalary'],
-                        request_received_date=row['RequestReceivedDate'],
-                        required_joining_date=row['RequiredJoiningDate'],
-                        vacancy_type=row['VacancyType'],
-                        agency_name=row['AgencyName'],
-                        departure_location=row['DepartureLocation'],
-                        noc_given_for_typing_date=row['NocGivenForTypingDate'],
-                        noc_typed_and_received_date=row['NocTypedAndReceivedDate'],
-                        airlines=row['Airlines'],
-                        gp_requested_date=row['GpRequestedDate'],
-                        gp_received_date=row['GpReceivedDate'],
-                        gp_number=row['GpNumber'],
-                        gp_arrival_date=row['GpArrivalDate'],
-                        app_submit_to_sponsorship_date=row['AppSubmit'],
-                        mosal_file=row['MosalFile'],
-                        noc1_received_date=row['Noc1ReceivedDate'],
-                        noc1_no=row['Noc1No'],
-                        noc2_received_date=row['Noc2ReceivedDate'],
-                        noc2_reapply_date=row['Noc2ReApplyDate'],
-                        visa_expiry_date=row['VisaExpiryDate'],
-                        visa_send_to_agency_date=row['VisaSendToAgencyDate'],
-                        arrival_date=row['ArrivalDate'],
-                        arrival_time=row['ArrivalTime'],
-                        arrival_status=row['ArrivalStatus'],
-                        current_status=row['CurrentStatus'],
-                        joining_date=row['JoiningDate'],
-                        recruitment_remarks=row['RecruitmentRemarks'],
-                        profile_photo=row['ProfilePhoto'],
-                        employee_status=row['EmployeeStatus'],
-                        salary=row['Salary'],
-                        allowance=row['Allowance'],
-                        total_salary=row['TotalSalary'],
-                        type_name=row['Type'],
-                        created_by=request.user
-                    )
-                elif upload_option == 'Update':
-                    employee = Employee.objects.filter(passport_no=row['PassportNo']).first()
-                    if employee:
-                        for field in row.index:
-                            setattr(employee, field.lower(), row[field])
-                        employee.save()
-            
-            messages.success(request, 'Employees uploaded successfully.')
-            return redirect('uploaded_data_list')
-    else:
-        form = BulkUploadEmployeeForm()
+class BulkUploadWorkOrderView(View):
+    def get(self, request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return redirect('login')
+        # for i in Employee.objects.all():
+        #     print(i.EmployeeId)
+        context = {
+            'uploaded_data': WorkOrder.objects.all().order_by('-wo_id')[:20],
+            'error_message': None,
+            'invalid_data': False,
+        }
+        return render(request, 'workorder_bulk_upload.html', context)
     
-    return render(request, 'recruitment/bulk_upload_employee.html', {'form': form})
+    def post(self, request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return redirect('login')
+        
+        context = {
+            'uploaded_data': [],
+            'error_message': None,
+            'invalid_data': False,
+        }
+        context['uploaded_data'] = WorkOrder.objects.all().order_by('-wo_id')[:20]
+        
+        excel_file = request.FILES.get('excel_file')
+        if not excel_file or not excel_file.name.endswith(('.xlsx', '.xls')):
+            context['error_message'] = "Please upload a valid Excel file."
+            return render(request, 'workorder_bulk_upload.html', context)
+        
+        try:
+            df = pd.read_excel(excel_file)
+            required_columns = {'wo_numeric_no', 'wo_no', 'employee_id', 'phone_no', 'camp_id', 'camp_name',
+                                'building_id', 'project_id', 'building_code', 'apartment_id', 'apt_area',
+                                'work_order_job_type_id', 'wo_description', 'requested_date', 'submitted_date',
+                                'status', 'status_date', 'days_taken', 'remarks'}
+            
+            missing_columns = required_columns - set(df.columns)
+            if missing_columns:
+                print(missing_columns)
+            #     context['error_message'] = f'Missing required columns: {", ".join(missing_columns)}'
+            #     return render(request, 'manage_workorder.html', context)
+            
+            workorders_to_create = []
+            for _, row in df.iterrows():
+                # employee_id_value = row.get('EmployeeId')
+                # employee_instance = Employee.objects.filter(EmployeeId=int(employee_id_value)) .first() if employee_id_value and str(employee_id_value).isdigit() else None
 
-def uploaded_data_list(request):
-    employees = Employee.objects.all()
-    return render(request, 'recruitment/uploaded_data_list.html', {'employees': employees})
+                workorders_to_create.append(
+                    WorkOrder(
+                        wo_numeric_no=row.get('WoNumericNo'),
+                        wo_no=row.get('WoNo'),
+                        employee_id=row.get('EmployeeId'),
+                        phone_no=row.get('PhoneNo'),
+                        camp_id=row.get('CampId'),
+                        camp_name=row.get('CampName'),
+                        building_id=row.get('BuildingId'),
+                        project_id=row.get('ProjectId'),
+                        building_code=row.get('BuildingCode'),
+                        apartment_id=row.get('ApartmentId'),
+                        apt_area=row.get('AptArea'),
+                        work_order_job_type_id=row.get('WorkOrderJobTypeId'),
+                        wo_description=row.get('WoDescription'),
+                        requested_date=row.get('RequestedDate'),
+                        submitted_date=row.get('SubmittedDate'),
+                        status=row.get('Status'),
+                        status_date=row.get('StatusDate'),
+                        days_taken=row.get('DaysTaken'),
+                        remarks=row.get('Remarks'),
+                    )
+                )
+            
+            WorkOrder.objects.bulk_create(workorders_to_create)
+            context['uploaded_data'] = WorkOrder.objects.all().order_by('-wo_id')[:20]
+            
+        except Exception as e:
+            context['error_message'] = f"Error processing file: {str(e)}"
+        
+        return render(request, 'workorder_bulk_upload.html', context)
 
 
+
+
+  
+  
+        
+class DownloadWorkOrderExcelView(View):  
+    def get(self, request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return redirect('login')
+
+        # Fetch the latest 20 work orders
+        work_orders = WorkOrder.objects.all().order_by('-wo_id')[:20]
+        
+        # Create a workbook and worksheet
+        workbook = Workbook()
+        worksheet = workbook.active
+        worksheet.title = "Work Orders"
+        
+        # Define headers from model fields
+        headers = [
+            'wo_id', 'wo_numeric_no', 'wo_no', 'employee_id', 'phone_no',
+            'camp_id', 'camp_name', 'building_id', 'project_id', 'building_code',
+            'apartment_id', 'apt_area', 'work_order_job_type_id', 'wo_description',
+            'requested_date', 'submitted_date', 'status', 'status_date',
+            'days_taken', 'remarks', 'created_at', 'updated_at'
+        ]
+        
+        # Add headers to worksheet
+        for col_num, header in enumerate(headers, 1):
+            worksheet.cell(row=1, column=col_num, value=header)
+        
+        # Populate work order data
+        for row_num, work_order in enumerate(work_orders, 2):
+            data = [
+                work_order.wo_id, work_order.wo_numeric_no, work_order.wo_no,
+                work_order.employee_id, work_order.phone_no, work_order.camp_id,
+                work_order.camp_name, work_order.building_id, work_order.project_id,
+                work_order.building_code, work_order.apartment_id, work_order.apt_area,
+                work_order.work_order_job_type_id, work_order.wo_description,
+                work_order.requested_date, work_order.submitted_date, work_order.status,
+                work_order.status_date, work_order.days_taken, work_order.remarks,
+                work_order.created_at.replace(tzinfo=None) if work_order.created_at else None,
+                work_order.updated_at.replace(tzinfo=None) if work_order.updated_at else None
+            ]
+            
+            for col_num, value in enumerate(data, 1):
+                worksheet.cell(row=row_num, column=col_num, value=value)
+        
+        # Create HTTP response
+        response = HttpResponse(
+            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+        response['Content-Disposition'] = 'attachment; filename=work_order_data.xlsx'
+        
+        # Save workbook to response
+        workbook.save(response)
+        
+        return response
+ 
 class RecruitmentView(View):
     def get(self, request, *args, **kwargs):
         if not request.user.is_authenticated:
@@ -450,6 +621,7 @@ class RecruitmentView(View):
         }
         
         return render(request, 'job_master.html', context)
+
     
 class RecruitmentSummaryView(View):
     def get(self, request, *args, **kwargs):
