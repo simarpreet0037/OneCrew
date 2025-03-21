@@ -885,3 +885,70 @@ class BulkUploadEmployeeView(View):
             context['error_message'] = f"Error processing file: {str(e)}"
         
         return render(request, 'manage_employee.html', context)
+
+class DownloadEmployeeExcelView(View):
+    def get(self, request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return redirect('login')
+        
+        # Fetch the latest 20 employees
+        employees = Employee.objects.all().order_by('-EmployeeId')[:20]
+        
+        # Create a workbook and worksheet
+        workbook = Workbook()
+        worksheet = workbook.active
+        worksheet.title = "Employees"
+        
+        # Define headers from model fields
+        headers = [
+            'EmployeeId', 'AuthenticationId', 'PoolNo', 'ControlNo', 'Name', 'Gender',
+            'PassportNo', 'PassportPlaceOfIssue', 'DateOfBirth', 'NationalityId', 'ProjectId',
+            'NativeLicenceStatus', 'NativeLicenceIssueDate', 'NativeLicenceExpiryDate',
+            'IndiaLicenceStatus', 'IndiaLicenceIssueDate', 'IndiaLicenceExpiryDate',
+            'TradeCertificateStatus', 'TradeCertificateIssueDate', 'TrainingCertificateStatus',
+            'TrainingCertificateExpiryDate', 'JobTitleId', 'PoolSalary', 'AssignedSalary',
+            'RequestReceivedDate', 'RequiredJoiningDate', 'VacancyTypeId', 'AgencyId',
+            'DepartureLocation', 'NOCGivenForTypingDate', 'NOCTypeAndReceivedDate',
+            'AppSubmitToSponsorshipDate', 'NOCReceivedDate', 'VisaExpiryDate', 'VisaSendToAgencyDate',
+            'ArrivalDate', 'ArrivalTime', 'ArrivalStatus', 'CurrentStatusId', 'JoiningDate',
+            'RecruitmentRemarks', 'ProfilePhoto', 'EmployeeStatus', 'Salary', 'TotalSalary',
+            'TypeName', 'created_at', 'updated_at'
+        ]
+        
+        # Add headers to worksheet
+        for col_num, header in enumerate(headers, 1):
+            worksheet.cell(row=1, column=col_num, value=header)
+        
+        # Populate employee data
+        for row_num, employee in enumerate(employees, 2):
+            data = [
+                employee.EmployeeId, employee.AuthenticationId, employee.PoolNo, employee.ControlNo, employee.Name, employee.Gender,
+                employee.PassportNo, employee.PassportPlaceOfIssue, employee.DateOfBirth, employee.NationalityId, employee.ProjectId,
+                employee.NativeLicenceStatus, employee.NativeLicenceIssueDate, employee.NativeLicenceExpiryDate,
+                employee.IndiaLicenceStatus, employee.IndiaLicenceIssueDate, employee.IndiaLicenceExpiryDate,
+                employee.TradeCertificateStatus, employee.TradeCertificateIssueDate, employee.TrainingCertificateStatus,
+                employee.TrainingCertificateExpiryDate, employee.JobTitleId, employee.PoolSalary, employee.AssignedSalary,
+                employee.RequestReceivedDate, employee.RequiredJoiningDate, employee.VacancyTypeId, employee.AgencyId,
+                employee.DepartureLocation, employee.NOCGivenForTypingDate, employee.NOCTypeAndReceivedDate,
+                employee.AppSubmitToSponsorshipDate, employee.NOCReceivedDate, employee.VisaExpiryDate, employee.VisaSendToAgencyDate,
+                employee.ArrivalDate, employee.ArrivalTime.replace(tzinfo=None) if employee.ArrivalTime else None, 
+                employee.ArrivalStatus, employee.CurrentStatusId, employee.JoiningDate,
+                employee.RecruitmentRemarks, employee.ProfilePhoto, employee.EmployeeStatus, employee.Salary, employee.TotalSalary,
+                employee.TypeName, 
+                employee.created_at.replace(tzinfo=None) if employee.created_at else None, 
+                employee.updated_at.replace(tzinfo=None) if employee.updated_at else None
+            ]
+            
+            for col_num, value in enumerate(data, 1):
+                worksheet.cell(row=row_num, column=col_num, value=value)
+        
+        # Create HTTP response
+        response = HttpResponse(
+            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+        response['Content-Disposition'] = 'attachment; filename=employee_data.xlsx'
+        
+        # Save workbook to response
+        workbook.save(response)
+        
+        return response
