@@ -450,3 +450,163 @@ class RecruitmentView(View):
         }
         
         return render(request, 'job_master.html', context)
+    
+class RecruitmentSummaryView(View):
+    def get(self, request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return redirect('login')
+        
+        # employees_without_project = Employee.objects.filter(project__isnull=True)
+
+        # # Randomly assign project (either 1 or 2) to them
+        # project_choices = [1, 2]
+        # for employee in employees_without_project:
+        #     random_project_id = random.choice(project_choices)
+        #     employee.project = ProjectMaster.objects.get(project_id=random_project_id)
+        #     employee.save()
+
+        projects_list = ProjectMaster.objects.annotate(
+            total_arrived=Count('employees', filter=Q(employees__ArrivalStatus='Arrived'), distinct=True)
+        )
+
+        context = {
+            'projects_names': projects_list,
+            'projects_list': projects_list,
+            'use_chart_js': True 
+        }
+        return render(request, 'recruitment_summary.html', context)
+    
+    def post(self, request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return redirect('login')
+        
+        # Get filter parameters from request
+        selected_projects = request.POST.getlist('projects')
+        arrival_from = request.POST.get('arrival_from')
+        arrival_to = request.POST.get('arrival_to')
+        
+        # Base query
+        query = Q()
+        
+        # Apply filters
+        if selected_projects and 'all' not in selected_projects:
+            query &= Q(project_id__in=selected_projects)
+            
+        if arrival_from:
+            try:
+                from_date = datetime.datetime.strptime(arrival_from, '%d-%m-%Y').date()
+                query &= Q(employees__ArrivalDate__gte=from_date)
+            except ValueError:
+                pass
+                
+        if arrival_to:
+            try:
+                to_date = datetime.datetime.strptime(arrival_to, '%d-%m-%Y').date()
+                query &= Q(employees__ArrivalDate__lte=to_date)
+            except ValueError:
+                pass
+        
+        # Always filter for arrived employees
+        arrival_status_query = Q(employees__ArrivalStatus='Arrived')
+        
+        # Get all projects for the dropdown
+        all_projects = ProjectMaster.objects.all()
+        
+        # Get filtered projects with count
+        if query:
+            projects_list = ProjectMaster.objects.filter(query).annotate(
+                total_arrived=Count('employees', filter=arrival_status_query, distinct=True)
+            )
+        else:
+            projects_list = ProjectMaster.objects.annotate(
+                total_arrived=Count('employees', filter=arrival_status_query, distinct=True)
+            )
+        
+        projects_names = ProjectMaster.objects.annotate(
+            total_arrived=Count('employees', filter=Q(employees__ArrivalStatus='Arrived'), distinct=True)
+        )
+        context = {
+            'projects_names': projects_names,
+            'projects_list': projects_list,
+            'all_projects': all_projects,
+            'selected_projects': selected_projects,
+            'arrival_from': arrival_from,
+            'arrival_to': arrival_to,
+            'use_chart_js': True,
+            'is_filtered': True
+        }
+        return render(request, 'recruitment_summary.html', context)
+    
+class ExportRecruitmentSummary(View):
+    def post(self, request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return redirect('login')
+        
+        selected_projects = request.POST.getlist('projects') if request.method == 'POST' else []
+        arrival_from = request.POST.get('arrival_from') if request.method == 'POST' else None
+        arrival_to = request.POST.get('arrival_to') if request.method == 'POST' else None
+        
+        # Base query
+        query = Q()
+        
+        # Apply filters
+        if selected_projects and 'all' not in selected_projects:
+            query &= Q(project_id__in=selected_projects)
+            
+        if arrival_from:
+            try:
+                from_date = datetime.datetime.strptime(arrival_from, '%d-%m-%Y').date()
+                query &= Q(employees__ArrivalDate__gte=from_date)
+            except ValueError:
+                pass
+                
+        if arrival_to:
+            try:
+                to_date = datetime.datetime.strptime(arrival_to, '%d-%m-%Y').date()
+                query &= Q(employees__ArrivalDate__lte=to_date)
+            except ValueError:
+                pass
+        
+        # Always filter for arrived employees
+        arrival_status_query = Q(employees__ArrivalStatus='Arrived')
+        
+        # Get filtered projects with count
+        if query:
+            projects_list = ProjectMaster.objects.filter(query).annotate(
+                total_arrived=Count('employees', filter=arrival_status_query, distinct=True)
+            )
+        else:
+            projects_list = ProjectMaster.objects.annotate(
+                total_arrived=Count('employees', filter=arrival_status_query, distinct=True)
+            )
+        
+        # Create Excel export (requires xlsxwriter package)
+        import xlsxwriter
+        import io
+        
+        output = io.BytesIO()
+        workbook = xlsxwriter.Workbook(output)
+        worksheet = workbook.add_worksheet('Recruitment Summary')
+        
+        # Add headers
+        headers = ['Project', 'Current Status', 'Total Arrived']
+        for col, header in enumerate(headers):
+            worksheet.write(0, col, header)
+        
+        # Add data
+        for row, project in enumerate(projects_list, 1):
+            worksheet.write(row, 0, project.project_name)
+            worksheet.write(row, 1, 'Active' if project.project_status else 'Inactive')
+            worksheet.write(row, 2, project.total_arrived)
+        
+        workbook.close()
+        
+        # Create the HttpResponse with the appropriate Excel header
+        output.seek(0)
+        response = HttpResponse(
+            output.read(),
+            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+        response['Content-Disposition'] = 'attachment; filename=recruitment_summary.xlsx'
+        
+        return response
