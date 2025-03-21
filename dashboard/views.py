@@ -1015,3 +1015,76 @@ class NewHireManagementView(View):
         
         return render(request, 'new_hire_management.html', context)
 
+class ExcelUploadNewHireView(View):
+    def get(self, request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return redirect('login')
+        # for i in Employee.objects.all():
+        #     print(i.EmployeeId)
+        context = {
+            'uploaded_data': NewHire.objects.all().order_by('-new_hire_id')[:20],
+            'error_message': None,
+            'invalid_data': False,
+        }
+        return render(request, 'new_hire_excel_upload.html', context)
+    
+    def post(self, request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return redirect('login')
+        
+        context = {
+            'uploaded_data': [],
+            'error_message': None,
+            'invalid_data': False,
+        }
+        context['uploaded_data'] = NewHire.objects.all().order_by('-new_hire_id')[:20]
+        
+        excel_file = request.FILES['excel_file']
+
+        if not excel_file.name.endswith(('.xlsx', '.xls')):
+            context['error_message'] = "Please upload a valid Excel file."
+            return render(request, 'new_hire_excel_upload.html', context)
+        
+        try:
+            df = pd.read_excel(excel_file)
+            required_columns = {"new_hire_id", "employee_id", "work_company_name", "arrived_salary",
+                "native_language", "education", "marital_status", "religion",
+                "food_type", "home_address", "email_id", "city_of_birth",
+                "work_status", "remark", "camp_id"}
+            
+            # missing_columns = required_columns - set(df.columns)
+            # if missing_columns:
+            #     return JsonResponse({'error': f'Missing required columns: {", ".join(missing_columns)}'}, status=400)
+            
+            employees_to_create = []
+            new_hires = [
+                NewHire(
+                    # new_hire_id=row["new_hire_id"],
+                    employee_id=Employee.objects.filter(EmployeeId=int(row["employee_id"])).first(),
+                    work_company_name=row["work_company_name"],
+                    arrived_salary=row["arrived_salary"],
+                    native_language=row["native_language"],
+                    education=row["education"],
+                    marital_status=row["marital_status"],
+                    religion=row["religion"],
+                    food_type=row["food_type"],
+                    home_address=row["home_address"],
+                    email_id=row["email_id"],
+                    city_of_birth=row["city_of_birth"],
+                    work_status=row["work_status"],
+                    remark=row["remark"],
+                    camp_id=row["camp_id"]
+                )
+                for _, row in df.iterrows()
+            ]
+            
+            NewHire.objects.bulk_create(new_hires)
+            
+            context['uploaded_data'] = NewHire.objects.all().order_by('-new_hire_id')[:20]
+
+            # messages.success(request, f"Successfully uploaded {len(df)} employees.")
+            
+        except Exception as e:
+            context['error_message'] = f"Error processing file: {str(e)}"
+        
+        return render(request, 'new_hire_excel_upload.html', context)
