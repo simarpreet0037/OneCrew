@@ -782,3 +782,106 @@ class ExportRecruitmentSummary(View):
         response['Content-Disposition'] = 'attachment; filename=recruitment_summary.xlsx'
         
         return response
+
+class BulkUploadEmployeeView(View):
+    def post(self, request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return redirect('login')
+        
+        context = {
+            'uploaded_data': [],
+            'error_message': None,
+            'invalid_data': False,
+        }
+        context['uploaded_data'] = Employee.objects.all().order_by('-EmployeeId')[:20]
+        
+        excel_file = request.FILES['excel_file']
+
+        if not excel_file.name.endswith(('.xlsx', '.xls')):
+            context['error_message'] = "Please upload a valid Excel file."
+            return render(request, 'manage_employee.html', context)
+        
+        # if not excel_file.name.endswith(('.xlsx', '.xls')):
+        #     return JsonResponse({'error': 'File is not an Excel format'}, status=400)
+    
+        try:
+            df = pd.read_excel(excel_file)
+            required_columns = {'AuthenticationId', 'PoolNo', 'ControlNo', 'Name', 'Gender',
+                                'PassportNo', 'PassportPlaceOfIssue', 'DateOfBirth', 'NationalityId',
+                                'ProjectId', 'NativeLicenceStatus', 'NativeLicenceIssueDate', 'NativeLicenceExpiryDate',
+                                'IndiaLicenceStatus', 'IndiaLicenceIssueDate', 'IndiaLicenceExpiryDate',
+                                'TradeCertificateStatus', 'TradeCertificateIssueDate', 'TrainingCertificateStatus',
+                                'TrainingCertificateExpiryDate', 'JobTitleId', 'PoolSalary', 'AssignedSalary',
+                                'RequestReceivedDate', 'RequiredJoiningDate', 'VacancyTypeId', 'AgencyId',
+                                'DepartureLocation', 'NOCGivenForTypingDate', 'NOCTypeAndReceivedDate',
+                                'AppSubmitToSponsorshipDate', 'NOCReceivedDate', 'VisaExpiryDate', 'VisaSendToAgencyDate',
+                                'ArrivalDate', 'ArrivalTime', 'ArrivalStatus', 'CurrentStatusId', 'JoiningDate',
+                                'RecruitmentRemarks', 'ProfilePhoto', 'EmployeeStatus', 'Salary', 'TotalSalary', 'TypeName'}
+            
+            # missing_columns = required_columns - set(df.columns)
+            # if missing_columns:
+            #     return JsonResponse({'error': f'Missing required columns: {", ".join(missing_columns)}'}, status=400)
+            
+            employees_to_create = []
+            for _, row in df.iterrows():
+                employees_to_create.append(
+                    Employee(
+                        AuthenticationId=row.get('AuthenticationId', None),
+                        PoolNo=row.get('PoolNo', None),
+                        ControlNo=row.get('ControlNo', None),
+                        Name=row.get('Name', None),
+                        Gender=row.get('Gender', None),
+                        PassportNo=row.get('PassportNo', None),
+                        PassportPlaceOfIssue=row.get('PassportPlaceOfIssue', None),
+                        DateOfBirth=row.get('DateOfBirth', None),
+                        NationalityId=row.get('NationalityId', None),
+                        ProjectId=row.get('ProjectId', None),
+                        NativeLicenceStatus=row.get('NativeLicenceStatus', None),
+                        NativeLicenceIssueDate=row.get('NativeLicenceIssueDate', None),
+                        NativeLicenceExpiryDate=row.get('NativeLicenceExpiryDate', None),
+                        IndiaLicenceStatus=row.get('IndiaLicenceStatus', None),
+                        IndiaLicenceIssueDate=row.get('IndiaLicenceIssueDate', None),
+                        IndiaLicenceExpiryDate=row.get('IndiaLicenceExpiryDate', None),
+                        TradeCertificateStatus=row.get('TradeCertificateStatus', None),
+                        TradeCertificateIssueDate=row.get('TradeCertificateIssueDate', None),
+                        TrainingCertificateStatus=row.get('TrainingCertificateStatus', None),
+                        TrainingCertificateExpiryDate=row.get('TrainingCertificateExpiryDate', None),
+                        JobTitleId=row.get('JobTitleId', None),
+                        PoolSalary=row.get('PoolSalary', None),
+                        AssignedSalary=row.get('AssignedSalary', None),
+                        RequestReceivedDate=row.get('RequestReceivedDate', None),
+                        RequiredJoiningDate=row.get('RequiredJoiningDate', None),
+                        VacancyTypeId=row.get('VacancyTypeId', None),
+                        AgencyId=row.get('AgencyId', None),
+                        DepartureLocation=row.get('DepartureLocation', None),
+                        NOCGivenForTypingDate=row.get('NOCGivenForTypingDate', None),
+                        NOCTypeAndReceivedDate=row.get('NOCTypeAndReceivedDate', None),
+                        AppSubmitToSponsorshipDate=row.get('AppSubmitToSponsorshipDate', None),
+                        NOCReceivedDate=row.get('NOCReceivedDate', None),
+                        VisaExpiryDate=row.get('VisaExpiryDate', None),
+                        VisaSendToAgencyDate=row.get('VisaSendToAgencyDate', None),
+                        ArrivalDate=row.get('ArrivalDate', None),
+                        ArrivalTime=row.get('ArrivalTime', None),
+                        ArrivalStatus=row.get('ArrivalStatus', None),
+                        CurrentStatusId=row.get('CurrentStatusId', None),
+                        JoiningDate=row.get('JoiningDate', None),
+                        RecruitmentRemarks=row.get('RecruitmentRemarks', None),
+                        ProfilePhoto=row.get('ProfilePhoto', None),
+                        EmployeeStatus=row.get('EmployeeStatus', None),
+                        Salary=row.get('Salary', None),
+                        TotalSalary=row.get('TotalSalary', None),
+                        TypeName=row.get('TypeName', None)
+                    )
+                )
+            
+            Employee.objects.bulk_create(employees_to_create)
+            # return JsonResponse({'message': f'Successfully added {len(employees_to_create)} employees'}, status=201)
+            
+            context['uploaded_data'] = Employee.objects.all().order_by('-EmployeeId')[:20]
+
+            # messages.success(request, f"Successfully uploaded {len(df)} employees.")
+            
+        except Exception as e:
+            context['error_message'] = f"Error processing file: {str(e)}"
+        
+        return render(request, 'manage_employee.html', context)
