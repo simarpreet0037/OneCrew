@@ -3,6 +3,7 @@ from django.shortcuts import render
 from django.db.models import Count, Sum
 from django.views import View
 from .models import ProjectMaster, JobMaster, Employee, NewHire, WorkOrder, User
+import pandas as pd
 
 class LoginView(View):
     def get(self, request, *args, **kwargs):
@@ -394,18 +395,16 @@ class LogoutView(View):
         messages.success(request, 'You have been successfully logged out.')
         return redirect('login')
 
-def work_order_summary(request):
-    if request.method == 'POST':
-        camp_ids = request.POST.getlist('camps')
-        from_date = request.POST.get('from_date')
-        to_date = request.POST.get('to_date')
-
-        work_orders = WorkOrder.objects.filter(CampId__in=camp_ids, Date__range=[from_date, to_date])
+class ManageEmployeeView(View):
+    def get(self, request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return redirect('login')
         context = {
-            'work_orders': work_orders,
+            'uploaded_data': Employee.objects.all().order_by('-EmployeeId')[:20],
+            'error_message': None,
+            'invalid_data': False,
         }
-        return render(request, 'work_order_summary.html', context)
-    return render(request, 'work_order_summary.html')
+        return render(request, 'manage_employee.html', context)
 
 class BulkUploadWorkOrderView(View):
     def get(self, request, *args, **kwargs):
@@ -486,11 +485,4 @@ class BulkUploadWorkOrderView(View):
         
         return render(request, 'workorder_bulk_upload.html', context)
 
-
-
-
-
-def uploaded_data_list(request):
-    employees = Employee.objects.all()
-    return render(request, 'recruitment/uploaded_data_list.html', {'employees': employees})
 
