@@ -952,3 +952,13 @@ class DownloadEmployeeExcelView(View):
         workbook.save(response)
         
         return response
+
+class CurrentStatusView(View):
+    def get(self, request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return redirect('login')
+        # currentstatus_list = CurrentStatus.objects.all()
+        currentstatus_list = []
+        return render(request, 'current_status_master.html', {
+            'currentstatus_list': currentstatus_list
+        })
