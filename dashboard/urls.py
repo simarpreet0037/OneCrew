@@ -1,19 +1,10 @@
 # dashboard/urls.py
 from django.urls import path
-from . import views
+from .views import (LoginView, DashboardView, WorkOrderReportView, RecruitmentView)
 
 urlpatterns = [
-    path('', views.dashboard, name='dashboard'),
-]
-
-#Regstarton
-
-# EMS/urls.py
-from django.contrib import admin
-from django.urls import path
-from registration import views
-
-urlpatterns = [
-    path('admin/', admin.site.urls),
-    path('register/', views.registration_view, name='register'),
+    path('login/', LoginView.as_view(), name='login'),
+    path('', DashboardView.as_view(), name='dashboard'),
+    path('work-order/', WorkOrderReportView.as_view(), name='work-order'),
+    path('job-master/', RecruitmentView.as_view(), name='job-master'),
 ]
