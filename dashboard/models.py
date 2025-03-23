@@ -1,8 +1,8 @@
-# Create your models here.
-# models.py
-from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
+from django.conf import settings
 from django.db import models
+from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
 
+# --------------------- Custom User Model ---------------------
 class CustomUserManager(BaseUserManager):
     def create_user(self, email, password=None, **extra_fields):
         """Creates and returns a user with an email and password."""
@@ -13,11 +13,16 @@ class CustomUserManager(BaseUserManager):
         user.set_password(password)
         user.save(using=self._db)
         return user
-    
+
     def create_superuser(self, email, password=None, **extra_fields):
         """Creates and returns a superuser with the given email and password."""
         extra_fields.setdefault("is_staff", True)
         extra_fields.setdefault("is_superuser", True)
+
+        if extra_fields.get("is_staff") is not True:
+            raise ValueError("Superuser must have is_staff=True.")
+        if extra_fields.get("is_superuser") is not True:
+            raise ValueError("Superuser must have is_superuser=True.")
 
         return self.create_user(email, password, **extra_fields)
 
@@ -37,6 +42,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     def __str__(self):
         return self.email
 
+# --------------------- Project Model ---------------------
 class ProjectMaster(models.Model):
     project_id = models.AutoField(primary_key=True)
     project_name = models.CharField(max_length=50)
@@ -46,109 +52,116 @@ class ProjectMaster(models.Model):
     def __str__(self):
         return self.project_name
 
+# --------------------- Job Model ---------------------
 class JobMaster(models.Model):
     job_id = models.AutoField(primary_key=True)
-    project = models.ForeignKey(ProjectMaster, on_delete=models.CASCADE)
+    project = models.ForeignKey(ProjectMaster, on_delete=models.CASCADE, related_name="jobs")
     job_name = models.CharField(max_length=50)
-    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)  # Add this
-    created_date = models.DateTimeField(auto_now_add=True)  # Add this
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True)
+    created_date = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return self.job_name
 
+# --------------------- Employee Model ---------------------
+class Employee(models.Model):
+    employee_id = models.AutoField(primary_key=True)
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL, 
+        on_delete=models.CASCADE,
+        related_name="employee",
+        null=True, 
+        blank=True
+    )
+    project = models.ForeignKey(ProjectMaster, on_delete=models.CASCADE, related_name="employees", null=True, blank=True)
+    name = models.CharField(max_length=100, null=True, blank=True)
+    gender = models.CharField(max_length=50, null=True, blank=True)
+    date_of_birth = models.DateField(null=True, blank=True)
+    passport_no = models.CharField(max_length=50, null=True, blank=True)
+    native_license_status = models.CharField(max_length=50, null=True, blank=True)
+    assigned_salary = models.DecimalField(max_digits=18, decimal_places=2, default=0.00)
+    recruitment_remarks = models.CharField(max_length=100, null=True, blank=True)
+    employee_status = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
 
+    def __str__(self):
+        return self.name if self.name else f"Employee {self.employee_id}"
+    
+# --------------------- Employee Factory Model ---------------------
+class EmployeeFactory:
+    """Factory class to create Employee objects with predefined attributes based on role."""
 
+    ROLE_DEFAULTS = {
+        "worker": {"assigned_salary": 30000.00, "employee_status": True},
+        "manager": {"assigned_salary": 80000.00, "employee_status": True},
+        "supervisor": {"assigned_salary": 60000.00, "employee_status": True},
+    }
 
+    @staticmethod
+    def create_employee(user, role="worker", name="New Employee", **kwargs):
+        """Creates an Employee with default attributes based on the role."""
+        if role not in EmployeeFactory.ROLE_DEFAULTS:
+            raise ValueError(f"Invalid role: {role}. Choose from {list(EmployeeFactory.ROLE_DEFAULTS.keys())}")
+
+        # Merge default values with user-provided kwargs
+        employee_data = {**EmployeeFactory.ROLE_DEFAULTS[role], "user": user, "name": name, **kwargs}
+
+        return Employee.objects.create(**employee_data)
+
+# --------------------- Work Order Model ---------------------
 class WorkOrder(models.Model):
+    STATUS_CHOICES = [
+        ('initiated', 'Initiated'),
+        ('in_progress', 'In Progress'),
+        ('completed', 'Completed'),
+    ]
+
     wo_id = models.AutoField(primary_key=True)
-    wo_numeric_no = models.IntegerField(blank=True, null=True)
-    wo_no = models.CharField(max_length=50, blank=True, null=True)
-    employee_id = models.IntegerField(blank=True, null=True)
-    phone_no = models.CharField(max_length=50, blank=True, null=True)
-    camp_id = models.IntegerField(blank=True, null=True)
-    camp_name = models.CharField(max_length=50, blank=True, null=True)
-    building_id = models.IntegerField(blank=True, null=True)
-    project_id = models.IntegerField(blank=True, null=True)
-    building_code = models.CharField(max_length=50, blank=True, null=True)
-    apartment_id = models.IntegerField(blank=True, null=True)
-    apt_area = models.CharField(max_length=200, blank=True, null=True)
-    work_order_job_type_id = models.IntegerField(blank=True, null=True)
+    address = models.CharField(max_length=255, blank=True, null=True)
+    days_taken = models.IntegerField(blank=True, null=True)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="work_orders")
+    project = models.ForeignKey(ProjectMaster, on_delete=models.CASCADE, related_name="work_orders", blank=True, null=True)
+    job = models.ForeignKey(JobMaster, on_delete=models.CASCADE, related_name="work_orders", blank=True, null=True)
+    worker = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="worker_work_orders")
     wo_description = models.TextField(blank=True, null=True)
     requested_date = models.DateField(blank=True, null=True)
     submitted_date = models.DateField(blank=True, null=True)
-    status = models.CharField(max_length=50, blank=True, null=True)
-    status_date = models.DateField(blank=True, null=True)
-    days_taken = models.IntegerField(blank=True, null=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='initiated')
+    status_date = models.DateField(auto_now_add=True)
     remarks = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        return f"WorkOrder {self.wo_no} ({self.status})"
-
+        return f"WorkOrder {self.wo_no} ({self.get_status_display()})"
     
-class Employee(models.Model):
-    EmployeeId = models.AutoField(primary_key=True)
-    project = models.ForeignKey(ProjectMaster, on_delete=models.CASCADE, related_name="employees", null=True, blank=True)
-    AuthenticationId = models.CharField(max_length=100, null=True, blank=True)
-    PoolNo = models.CharField(max_length=50, null=True, blank=True)
-    ControlNo = models.CharField(max_length=50, null=True, blank=True)
-    Name = models.CharField(max_length=100, null=True, blank=True)
-    Gender = models.CharField(max_length=50, null=True, blank=True)
-    PassportNo = models.CharField(max_length=50, null=True, blank=True)
-    PassportPlaceOfIssue = models.CharField(max_length=50, null=True, blank=True)
-    DateOfBirth = models.DateField(null=True, blank=True)
-    NationalityId = models.IntegerField(null=True, blank=True)
-    ProjectId = models.IntegerField(null=True, blank=True)
-    NativeLicenceStatus = models.CharField(max_length=50, null=True, blank=True)
-    NativeLicenceIssueDate = models.DateField(null=True, blank=True)
-    NativeLicenceExpiryDate = models.DateField(null=True, blank=True)
-    IndiaLicenceStatus = models.CharField(max_length=50, null=True, blank=True)
-    IndiaLicenceIssueDate = models.DateField(null=True, blank=True)
-    IndiaLicenceExpiryDate = models.DateField(null=True, blank=True)
-    TradeCertificateStatus = models.CharField(max_length=50, null=True, blank=True)
-    TradeCertificateIssueDate = models.DateField(null=True, blank=True)
-    TrainingCertificateStatus = models.CharField(max_length=50, null=True, blank=True)
-    TrainingCertificateExpiryDate = models.DateField(null=True, blank=True)
-    JobTitleId = models.IntegerField(null=True, blank=True)
-    PoolSalary = models.DecimalField(max_digits=18, decimal_places=2, null=True, blank=True)
-    AssignedSalary = models.DecimalField(max_digits=18, decimal_places=2, null=True, blank=True)
-    RequestReceivedDate = models.DateField(null=True, blank=True)
-    RequiredJoiningDate = models.DateField(null=True, blank=True)
-    VacancyTypeId = models.IntegerField(null=True, blank=True)
-    AgencyId = models.IntegerField(null=True, blank=True)
-    DepartureLocation = models.CharField(max_length=50, null=True, blank=True)
-    NOCGivenForTypingDate = models.DateField(null=True, blank=True)
-    NOCTypeAndReceivedDate = models.DateField(null=True, blank=True)
-    AppSubmitToSponsorshipDate = models.DateField(null=True, blank=True)
-    NOCReceivedDate = models.DateField(null=True, blank=True)
-    VisaExpiryDate = models.DateField(null=True, blank=True)
-    VisaSendToAgencyDate = models.DateField(null=True, blank=True)
-    ArrivalDate = models.DateField(null=True, blank=True)
-    ArrivalTime = models.TimeField(null=True, blank=True)
-    ArrivalStatus = models.CharField(max_length=50, null=True, blank=True)
-    CurrentStatusId = models.IntegerField(null=True, blank=True)
-    JoiningDate = models.DateField(null=True, blank=True)
-    RecruitmentRemarks = models.CharField(max_length=100, null=True, blank=True)
-    ProfilePhoto = models.CharField(max_length=500, null=True, blank=True)
-    EmployeeStatus = models.BooleanField(null=True, blank=True)
-    Salary = models.DecimalField(max_digits=18, decimal_places=2, null=True, blank=True)
-    TotalSalary = models.DecimalField(max_digits=18, decimal_places=2, null=True, blank=True)
-    TypeName = models.CharField(max_length=50, null=True, blank=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+class WorkOrderFactory:
+    @staticmethod
+    def create_work_order(job, user, address=""):
+        """
+        Factory method to create a work order with consistent initialization.
+        The only dynamic field at creation is `address`, the rest are prefilled.
+        """
+        return WorkOrder.objects.create(
+            project=job.project,  # Ensure the project is assigned
+            job=job,  # Ensure the job is assigned
+            user=user,  # Ensure the user is assigned
+            wo_description=f"Work order for {job.job_name}",
+            requested_date=job.created_date,
+            address=address,  # Dynamically set address
+            days_taken=None,
+            worker=None,
+            submitted_date=None,
+            status='initiated',
+            remarks='',
+        )
 
-    def __str__(self):
-        return self.Name if self.Name else f"Employee {self.EmployeeId}"
-
+# --------------------- New Hire Model ---------------------
 class NewHire(models.Model):
+    employee_id = models.IntegerField()
     new_hire_id = models.AutoField(primary_key=True)
-    # employee_id = models.IntegerField()
-    employee_id = models.ForeignKey(Employee, on_delete=models.CASCADE, null=True, blank=True)
-    # work_company_id = models.IntegerField()
+    employee_fk = models.ForeignKey(Employee, on_delete=models.CASCADE, null=True, blank=True)
     work_company_name = models.CharField(max_length=100)
     arrived_salary = models.DecimalField(max_digits=18, decimal_places=2)
-    # native_language_id = models.IntegerField()
     native_language = models.CharField(max_length=100)
     education = models.CharField(max_length=100)
     marital_status = models.CharField(max_length=50)
@@ -158,8 +171,8 @@ class NewHire(models.Model):
     email_id = models.EmailField(max_length=50)
     city_of_birth = models.CharField(max_length=50)
     work_status = models.CharField(max_length=50)
-    remark = models.CharField(max_length=50)
+    remark = models.TextField()
     camp_id = models.IntegerField()
 
     def __str__(self):
-        return f"{self.new_hire_id} - {self.employee_id}"
+        return f"{self.new_hire_id} - {self.employee}"
