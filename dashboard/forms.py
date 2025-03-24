@@ -1,18 +1,6 @@
 from django import forms
-from .models import Employee, NewHire
-from dashboard.models import JobMaster, ProjectMaster, WorkOrder
+from .models import Employee, NewHire,JobMaster, ProjectMaster, WorkOrder
 
-class EmployeeUploadForm(forms.Form):
-    excel_file = forms.FileField(
-        label='Select a Valid Excel File To Upload:',
-        widget=forms.FileInput(attrs={'accept': '.xlsx, .xls'}),
-    )
-    
-from django import forms
-from .models import Employee
-
-from django import forms
-from .models import Employee
 
 #User = get_user_model()
 
@@ -100,9 +88,6 @@ class JobMasterForm(forms.ModelForm):
 
 
 # create a project
-from django import forms
-from core.models import ProjectMaster
-
 class ProjectMasterForm(forms.ModelForm):
     class Meta:
         model = ProjectMaster
@@ -150,13 +135,10 @@ class CompleteWorkOrderForm(forms.ModelForm):
         }
 
 
-# forms.py for sign-up
-from django import forms
+
 from django.contrib.auth import get_user_model
-from EMS.settings import SIGNUP_SECRET_KEY, SUPERUSER_SECRET_KEY
-
+from OneCrew.settings import SIGNUP_SECRET_KEY, SUPERUSER_SECRET_KEY
 User = get_user_model()
-
 class SignupForm(forms.ModelForm):
     email = forms.EmailField(label="Email", widget=forms.EmailInput(attrs={"placeholder": "Enter your email"}))
     password = forms.CharField(widget=forms.PasswordInput(attrs={"placeholder": "Enter your password"}))

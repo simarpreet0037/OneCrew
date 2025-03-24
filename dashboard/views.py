@@ -5,23 +5,22 @@ from django.contrib import messages
 from django.core.paginator import Paginator
 from django.db.models import Count, Q
 from django.http import JsonResponse, HttpResponse
-from datetime import datetime, timedelta
 from django.views import View
 from django.db import models
 from django.views.decorators.http import require_http_methods
-from dashboard.models import User, JobMaster, ProjectMaster, Employee, NewHire, WorkOrder, Notification
-from dashboard.forms import EmployeeUploadForm, EmployeeProfileForm, EditOrCompleteWorkOrderForm
+from .models import User, JobMaster, ProjectMaster, Employee, NewHire, WorkOrder, Notification
+from .forms import EmployeeProfileForm, EditOrCompleteWorkOrderForm
 from openpyxl import Workbook
 import pandas as pd
 import io
 import xlsxwriter
 import datetime
+from datetime import datetime, date, time
 import random
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
 from django.core.serializers.json import DjangoJSONEncoder
 import json
-from datetime import date
 from decimal import Decimal
 from django.contrib.auth.decorators import login_required
 
@@ -148,6 +147,7 @@ class LogoutView(View):
 
 from .forms import SignupForm
 from .models import Employee, EmployeeFactory
+from OneCrew.settings import SUPERUSER_SECRET_KEY
 # --------------------------------------------------
 # User Signup View (Creates Employee Profile & Logs In)
 # --------------------------------------------------
@@ -157,6 +157,7 @@ def signup_view(request):
     - Processes signup form submission.
     - Saves user with a hashed password.
     - Creates an associated Employee profile using EmployeeFactory.
+    - Allows superuser creation if the correct secret key is provided.
     - Automatically logs in the user upon successful registration.
     """
     if request.method == "POST":
@@ -165,9 +166,15 @@ def signup_view(request):
         if form.is_valid():
             user = form.save(commit=False)
             user.set_password(form.cleaned_data["password"])
+
+            # Determine if the user should be a superuser
+            if form.cleaned_data["secret_key"] == SUPERUSER_SECRET_KEY:
+                user.is_staff = True
+                user.is_superuser = True
+
             user.save()
 
-            # Use EmployeeFactory to create the default Employee
+    
             EmployeeFactory.create_employee(user=user)
 
             login(request, user)  # Automatically log in the user after signup
@@ -340,9 +347,9 @@ class DateEncoder(json.JSONEncoder):
     - Decimal -> float
     """
     def default(self, obj):
-        if isinstance(obj, (datetime.datetime, datetime.date)):  
+        if isinstance(obj, (datetime,date)):  
             return obj.isoformat()
-        if isinstance(obj, datetime.time):  # Add `time` handling
+        if isinstance(obj, time):  # Add `time` handling
             return obj.strftime('%H:%M:%S')  # Format as 'HH:MM:SS'
         if isinstance(obj, Decimal):  
             return float(obj)  
@@ -413,7 +420,6 @@ class ViewEmployeeDetails(View):
                 'native_license_expiry': employee.native_license_expiry,
                 'recruitment_remarks': employee.recruitment_remarks,
             }
-            
             return JsonResponse({
                 'success': True,
                 'employee': employee_data
@@ -421,6 +427,7 @@ class ViewEmployeeDetails(View):
         except Employee.DoesNotExist:
             return JsonResponse({'error': 'Employee not found'}, status=404)
         except Exception as e:
+            print(e)
             return JsonResponse({'error': str(e)}, status=500)
         
 # --------------------------------------------------
@@ -499,12 +506,12 @@ class UpdateEmployeeDetails(View):
                         # Handle other data types (DateField, TimeField, etc.)
                         if field.get_internal_type() == 'DateField' and value:
                             try:
-                                value = datetime.datetime.strptime(value, '%Y-%m-%d').date()
+                                value = datetime.strptime(value, '%Y-%m-%d').date()
                             except ValueError:
                                 value = None
                         elif field.get_internal_type() == 'TimeField' and value:
                             try:
-                                value = datetime.datetime.strptime(value, '%H:%M').time()
+                                value = datetime.strptime(value, '%H:%M').time()
                             except ValueError:
                                 value = None
                         elif field.get_internal_type() == 'BooleanField':
@@ -808,6 +815,10 @@ def complete_or_edit_work_order_admin(request, wo_id):
             # Save the form with calculated values
             form.save()
 
+            # Notify observers (including email notification)
+            notification_observer = Notification()
+            work_order.attach(notification_observer)
+            work_order.notify()
             return redirect('workorder-list')  # Redirect after saving
     else:
         form = CompleteWorkOrderForm(instance=work_order)
@@ -834,6 +845,11 @@ def edit_or_complete_work_order(request, wo_id):
                 work_order.days_taken = (form.cleaned_data['submitted_date'] - work_order.requested_date).days
 
             work_order.save()
+            
+             # Notify observers (including email notification)
+            notification_observer = Notification()
+            work_order.attach(notification_observer)
+            work_order.notify()
             return redirect('worker_work_orders')  # Redirect after update
 
     else:
