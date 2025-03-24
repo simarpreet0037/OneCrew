@@ -1,0 +1,94 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EMS Signup</title>
+    <link href="{% static 'css/signin.css' %}" rel="stylesheet" type="text/css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+</head>
+<body>
+    <div class="container">
+        <div class="login-container">
+            <div class="logo">
+                <img src="{% static 'img/EMSLogo.jpg' %}" alt="EMS Logo">
+            </div>
+            <h1>Create an Account</h1>
+
+            <!-- Display form-wide messages (like invalid secret key) -->
+            {% if messages %}
+                <div class="messages">
+                    {% for message in messages %}
+                        <p class="error">{{ message }}</p>
+                    {% endfor %}
+                </div>
+            {% endif %}
+
+            <form action="{% url 'signup' %}" method="post">
+                {% csrf_token %}
+
+                <!-- Email Field -->
+                <div class="input-group">
+                    <input type="email" id="email" name="email" placeholder="Enter your email here" required value="{{ form.email.value|default:'' }}">
+                    <label for="email" class="input-icon">
+                        <i class="fa-regular fa-envelope"></i>
+                    </label>
+                </div>
+                {% if form.email.errors %}
+                    <p class="error">{{ form.email.errors.0 }}</p>
+                {% endif %}
+
+                <!-- Password Field -->
+                <div class="input-group">
+                    <input type="password" id="password" name="password" placeholder="Enter your password here" required>
+                    <label for="password" class="input-icon">
+                        <i class="fa-solid fa-lock"></i>
+                    </label>
+                </div>
+                {% if form.password.errors %}
+                    <p class="error">{{ form.password.errors.0 }}</p>
+                {% endif %}
+
+                <!-- Confirm Password Field -->
+                <div class="input-group">
+                    <input type="password" id="confirm_password" name="confirm_password" placeholder="Confirm your password" required>
+                    <label for="confirm_password" class="input-icon">
+                        <i class="fa-solid fa-lock"></i>
+                    </label>
+                </div>
+                {% if form.confirm_password.errors %}
+                    <p class="error">{{ form.confirm_password.errors.0 }}</p>
+                {% endif %}
+
+                <!-- Secret Key Field -->
+                <div class="input-group">
+                    <input type="password" id="secret_key" name="secret_key" placeholder="Enter the secret key" required>
+                    <label for="secret_key" class="input-icon">
+                        <i class="fa-solid fa-key"></i>
+                    </label>
+                </div>
+                {% if form.secret_key.errors %}
+                    <p class="error">{{ form.secret_key.errors.0 }}</p>
+                {% endif %}
+
+                <!-- Submit Button -->
+                <button type="submit" class="login-btn">Sign Up</button>
+            </form>
+
+            <div class="register">
+                <p>Already have an account? <a href="{% url 'login' %}">Login here</a></p>
+            </div>
+        </div>
+
+        <div class="banner">
+            <div class="banner-content">
+                <div class="logos">
+                    <img src="{% static 'img/LoginRightBanner.jpg' %}" alt="Banner Image">
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
