@@ -3,28 +3,167 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/job_master.css' %}">
+
+<style>
+    /* Main Layout */
+    .content-wrapper {
+        display: flex;
+        gap: 10px; /* Small gap between sections */
+        min-height: 100vh;
+        padding: 10px;
+        align-items: stretch;
+    }
+
+    /* Projects Section */
+    .project-list {
+        flex: 1; /* Make it share space with job-list-container */
+        max-width: 300px; /* Ensure it doesn't become too wide */
+        background-color: #f8f9fa;
+        padding: 15px;
+        border-right: 1px solid #ddd;
+        overflow-y: auto;
+    }
+
+    .project-list h3 {
+        font-size: 18px;
+        font-weight: bold;
+        margin-bottom: 15px;
+        text-align: center;
+    }
+
+    .list-group {
+        padding: 0;
+        list-style: none;
+    }
+
+    .list-group-item {
+        padding: 10px;
+        font-size: 14px;
+        border-bottom: 1px solid #ddd;
+        cursor: pointer;
+        transition: background-color 0.2s ease-in-out;
+    }
+
+    .list-group-item a {
+        color: #0078d7;
+        text-decoration: none;
+        display: block;
+    }
+
+    .list-group-item:hover,
+    .list-group-item.active {
+        background-color: #e0e0e0;
+    }
+
+    .btn-primary {
+        display: block;
+        width: 100%;
+        text-align: center;
+        padding: 8px;
+        margin-top: 15px;
+        font-size: 14px;
+    }
+
+    /* Jobs Section */
+    .job-list-container {
+        flex: 2; /* Allow it to take up more space */
+        padding: 15px;
+        background: #fff;
+        border-radius: 5px;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        overflow-x: auto;
+    }
+
+    .job-list-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 15px;
+    }
+
+    /* Table Styles */
+    .table-container {
+        overflow-x: auto;
+        min-height: 200px;
+        max-height: 500px;
+    }
+
+    .data-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .data-table th {
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        background-color: #f2f2f2;
+        padding: 8px;
+        text-align: left;
+        font-weight: 600;
+    }
+
+    .data-table td {
+        padding: 8px;
+        border: 1px solid #ddd;
+    }
+
+    /* Responsive Fixes */
+    @media (max-width: 768px) {
+        .content-wrapper {
+            flex-direction: column;
+        }
+
+        .project-list,
+        .job-list-container {
+            width: 100%;
+            max-width: none;
+        }
+
+        .btn-primary {
+            width: 100%;
+        }
+    }
+</style>
 {% endblock %}
 
 {% block content %}
 <div class="content-wrapper">
-    <h2 class="page-title">Job Master</h2>
     
+    <!-- Left Side: Project List -->
+    <div class="project-list">
+        <h3>Projects</h3>
+        <ul class="list-group">
+            <li class="list-group-item {% if not selected_project_id %}active{% endif %}">
+                <a href="{% url 'job_master' %}" class="text-decoration-none">All Projects</a>
+            </li>
+            {% for project in projects %}
+            <li class="list-group-item project-item {% if project.project_id == selected_project_id %}active{% endif %}">
+                <a href="?project={{ project.project_id }}" class="text-decoration-none">{{ project.project_name }}</a>
+            </li>
+            {% endfor %}
+        </ul>
+        <a href="{% url 'create_project' %}" class="btn btn-primary">+ New Project</a>
+    </div>
+
+    <!-- Right Side: Job List -->
     <div class="job-list-container">
-        <div class="job-list-header d-flex justify-content-between align-items-center">
+        <div class="job-list-header">
             <h3 class="job-list-title">Job List</h3>
-            <a href="" class="btn btn-primary">New Job</a>
+            <a href="{% url 'create_job' %}" class="btn btn-primary">+ New Job</a>
         </div>
-        
-        <div class="table-responsive">
-            <table class="table table-bordered table-hover">
+
+        {% if jobs %}
+        <div class="table-container">
+            <table class="table table-bordered table-hover data-table">
                 <thead>
                     <tr>
                         <th>S.No</th>
                         <th>Edit</th>
                         <th>View</th>
-                        <th>ProjectName</th>
-                        <th>JobName</th>
-                        <th>CreatedBy</th>
+                        <th>Project Name</th>
+                        <th>Job Name</th>
+                        <th>Created By</th>
                         <th>Date</th>
                         <th>Delete</th>
                     </tr>
@@ -33,57 +172,46 @@
                     {% for job in jobs %}
                     <tr>
                         <td>{{ forloop.counter }}</td>
-                        <td><a href="">Edit</a></td>
-                        <td><a href="">View</a></td>
-                        <td>{{ job.project.project_name }}</td>  <!-- Use the related project's name -->
+                        <td><a href="#">Edit</a></td>
+                        <td><a href="{% url 'initiate_work_order' job.job_id %}">View</a></td>
+                        <td>{{ job.project.project_name }}</td>
                         <td>{{ job.job_name }}</td>
-                        <td></td>  <!-- Replace with actual creator if you have one -->
-                        <td></td>  <!-- Replace with actual date if you have one -->
-                        <td><a href="" class="text-danger">Delete</a></td>
+                        <td>{{ job.created_by }}</td>
+                        <td>{{ job.created_date|date:"Y-m-d" }}</td>
+                        <td><a href="#" class="text-danger">Delete</a></td>
                     </tr>
                     {% endfor %}
                 </tbody>
             </table>
         </div>
-        
+
+        <!-- Pagination -->
         <div class="pagination">
             <nav aria-label="Page navigation">
                 <ul class="pagination">
                     <li class="page-item">
-                        <a class="page-link" href="#" aria-label="First">
+                        <a class="page-link" href="?page=1{% if selected_project_id %}&project={{ selected_project_id }}{% endif %}" aria-label="First">
                             <span aria-hidden="true">«</span>
                         </a>
                     </li>
                     {% for i in page_range %}
-                    <li class="page-item {% if i == page_obj.number %}active{% endif %}">
-                        <a class="page-link" href="?page={{ i }}">{{ i }}</a>
+                    <li class="page-item {% if i == jobs.number %}active{% endif %}">
+                        <a class="page-link" href="?page={{ i }}{% if selected_project_id %}&project={{ selected_project_id }}{% endif %}">{{ i }}</a>
                     </li>
                     {% endfor %}
                     <li class="page-item">
-                        <a class="page-link" href="#" aria-label="Last">
+                        <a class="page-link" href="?page={{ total_pages }}{% if selected_project_id %}&project={{ selected_project_id }}{% endif %}" aria-label="Last">
                             <span aria-hidden="true">»</span>
                         </a>
                     </li>
                 </ul>
             </nav>
-            <div class="page-size">
-                Page size: 
-                <select id="page-size-select" onchange="changePageSize(this.value)">
-                    <option value="10" {% if page_size == 10 %}selected{% endif %}>10</option>
-                    <option value="20" {% if page_size == 20 %}selected{% endif %}>20</option>
-                    <option value="50" {% if page_size == 50 %}selected{% endif %}>50</option>
-                </select>
-            </div>
-            <div class="page-info">
-                {{ jobs.start_index }} - {{ jobs.end_index }} of {{ paginator.count }} items in {{ total_pages }} pages
-            </div>
         </div>
+        
+        {% else %}
+        <p>No jobs available. Select a project or create a new job.</p>
+        {% endif %}
     </div>
-</div>
 
-<script>
-    function changePageSize(size) {
-        window.location.href = "?page_size=" + size;
-    }
-</script>
+</div>
 {% endblock %}

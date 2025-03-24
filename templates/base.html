@@ -70,40 +70,27 @@
                         </ul>
                     </li>
                     <li class="nav-item">
-                        <a href="{% url 'job-master' %}">
+                        <a href="{% url 'job_master' %}">
                             <i class="fas fa-user-plus"></i>
-                            Recruitment
+                            Projects
                             <i class="fas fa-chevron-right toggle-icon"></i>
                         </a>
                         <ul class="submenu">
-                            <li><a href=""><i class="fas fa-angle-right"></i> Job Master</a></li>
-                            <li><a href=""><i class="fas fa-angle-right"></i> Manage Employee</a></li>
-                            <li><a href=""><i class="fas fa-angle-right"></i> Current Status</a></li>
-                            <li><a href=""><i class="fas fa-angle-right"></i> Recruitment Summary</a></li>
+                            <li><a href="{% url 'job_master' %}"><i class="fas fa-angle-right"></i> Jobs</a></li>
+                            <li><a href="{% url 'manage-employee' %}"><i class="fas fa-angle-right"></i> Manage Employees</a></li>
+                            <li><a href="{% url 'recruitment-summary' %}"><i class="fas fa-angle-right"></i> Recruitment Summary</a></li>
+                            <li><a href="{% url 'workorder-list' %}"><i class="fas fa-angle-right"></i> Work Order Management</a></li>
                         </ul>
                     </li>
                     <li class="nav-item">
-                        <a href="">
+                        <a href="{% url 'work-order' %}">
                             <i class="fas fa-tools"></i>
-                            Facilities
+                            Workers
                             <i class="fas fa-chevron-right toggle-icon"></i>
                         </a>
                         <ul class="submenu">
-                            {% comment %} <li><a href=""><i class="fas fa-angle-right"></i> Work Order Management</a></li> {% endcomment %}
-                            <li><a href=""><i class="fas fa-angle-right"></i> Work Order Management</a></li>
-                        </ul>
-                    </li>
-                    <li class="nav-item">
-                        <a href="">
-                            <i class="fas fa-edit"></i>
-                            New Hire Management
-                            <i class="fas fa-chevron-right toggle-icon"></i>
-                        </a>
-                        <ul class="submenu">
-                            <li><a href=""><i class="fas fa-angle-right"></i> Add New Hire</a></li>
-                            <li><a href=""><i class="fas fa-angle-right"></i> Excel Upload</a></li>
-                            <li><a href=""><i class="fas fa-angle-right"></i> New Hire Report</a></li>
-                            <li><a href=""><i class="fas fa-angle-right"></i> Update Work Status</a></li>
+                            <li><a href="{% url 'worker_work_orders' %}"><i class="fas fa-angle-right"></i>My Workorders</a></li>
+                            <li><a href="{% url 'employee-profile' %}"><i class="fas fa-angle-right"></i>My Profile</a></li>
                         </ul>
                     </li>
                 </ul>
@@ -111,7 +98,7 @@
             
             <!-- Logout Button Fixed at Bottom -->
             <div class="logout-container">
-                <a href="" class="logout-btn">
+                <a href="{% url 'logout' %}" class="logout-btn">
                     <i class="fas fa-sign-out-alt"></i>
                     Logout
                 </a>
@@ -132,7 +119,7 @@
                     <a href="#" class="user-profile">
                         <img src="{% static 'img/Default.jpg' %}" alt="User Profile">
                     </a>
-                    <a href="" class="logout-btn">
+                    <a href="{% url 'logout' %}" class="logout-btn">
                         <i class="fas fa-sign-out-alt"></i>
                     </a>
                 </div>
@@ -149,5 +136,3 @@
     {% block extra_js %}{% endblock %}
 </body>
 </html>
-
-

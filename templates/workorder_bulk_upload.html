@@ -1,0 +1,90 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/new_hire_excel_upload.css' %}">
+{% endblock %}
+
+{% block content %}
+<h1 class="page-title">WorkOrder List</h1>
+
+<div class="upload-container1">
+    <div class="filter-section">
+        <form method="get" class="filter-form">
+            <div class="filter-item">
+                <label for="project">Filter by Project:</label>
+                <select name="project" id="project">
+                    <option value="">-- Select Project --</option>
+                    {% for project in projects %}
+                    <option value="{{ project.project_name }}" {% if request.GET.project == project.project_name %}selected{% endif %}>
+                        {{ project.project_name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="filter-item">
+                <label for="status">Filter by Status:</label>
+                <select name="status" id="status">
+                    <option value="">-- Select Status --</option>
+                    {% for status, status_display in status_choices %}
+                    <option value="{{ status }}" {% if request.GET.status == status %}selected{% endif %}>
+                        {{ status_display }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="filter-actions">
+                <button type="submit" class="filter-btn">Apply Filters</button>
+            </div>
+        </form>
+    </div>
+
+    <div class="data-table">
+        <h3>WorkOrder List</h3>
+        <table class="uploaded-data-table">
+            <thead>
+                <tr>
+                    <th>S.No</th>
+                    <th>Description</th>
+                    <th>Requested Date</th>
+                    <th>Submitted Date</th>
+                    <th>Status</th>
+                    <th>Status Date</th>
+                    <th>Days Taken</th>
+                    <th>Remarks</th>
+                    <th>Address</th>
+                    <th>User</th>
+                    <th>Project</th>
+                    <th>Job</th>
+                    <th>Worker</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if work_orders %}
+                    {% for item in work_orders %}
+                    <tr>
+                        <td><a href="{% url 'edit_or_complete_work_order_admin' item.wo_id %}" class="btn btn-edit">Edit</a></td>
+                        <td>{{ item.wo_description }}</td>
+                        <td>{{ item.requested_date }}</td>
+                        <td>{{ item.submitted_date }}</td>
+                        <td>{{ item.get_status_display }}</td>
+                        <td>{{ item.status_date }}</td>
+                        <td>{{ item.days_taken }}</td>
+                        <td>{{ item.remarks }}</td>
+                        <td>{{ item.address }}</td>
+                        <td>{{ item.user.email }}</td>
+                        <td>{{ item.project.project_name }}</td>
+                        <td>{{ item.job.job_name }}</td>
+                        <td>{{ item.worker.email }}</td>
+                    </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr>
+                        <td colspan="13">No records to display.</td>
+                    </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,137 @@
+{% extends 'base.html' %}
+
+{% block title %}Edit or Complete Work Order - {{ work_order.wo_id }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .form-container {
+        max-width: 600px;
+        margin: 20px auto;
+        padding: 20px;
+        background: #fff;
+        border-radius: 8px;
+        box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
+        padding: 20px;
+    }
+
+    .form-group {
+        margin-bottom: 15px;
+    }
+
+    .form-control {
+        width: 100%;
+        padding: 8px 12px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        font-size: 14px;
+    }
+
+    .form-control:focus {
+        border-color: #007bff;
+        outline: none;
+        box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+    }
+
+    label {
+        font-weight: 500;
+        display: block;
+        margin-bottom: 5px;
+        font-size: 14px;
+        color: #333;
+    }
+
+    /* Toggle Switch */
+    .toggle-switch-container {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 15px;
+    }
+
+    .toggle-switch {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .toggle-switch input {
+        display: none;
+    }
+
+    .toggle-switch label {
+        background: #ccc;
+        padding: 10px 20px;
+        border-radius: 20px;
+        cursor: pointer;
+        transition: 0.3s;
+        user-select: none;
+    }
+
+    .toggle-switch input:checked + label {
+        background: #28a745;
+        color: white;
+    }
+
+    .btn-primary {
+        width: 100%;
+        padding: 10px;
+        font-size: 16px;
+        font-weight: 500;
+        border-radius: 4px;
+        transition: background-color 0.2s ease-in-out;
+    }
+
+    .btn-primary {
+        background-color: #007bff;
+        border-color: #007bff;
+        color: white;
+    }
+
+    .btn-primary:hover {
+        background-color: #0056b3;
+        border-color: #004085;
+    }
+
+    @media (max-width: 768px) {
+        .form-container {
+            max-width: 90%;
+            padding: 15px;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="form-container">
+    <h2 class="text-center">Edit or Complete Work Order: {{ work_order.wo_id }}</h2>
+
+    <form method="post">
+        {% csrf_token %}
+        
+        <div class="form-group">
+            <label for="id_submitted_date">Submitted Date:</label>
+            {{ form.submitted_date }}
+        </div>
+
+        <div class="form-group">
+            <label for="id_remarks">Remarks:</label>
+            {{ form.remarks }}
+        </div>
+
+        <!-- Custom Toggle Switch -->
+        <div class="toggle-switch-container">
+            <div class="toggle-switch">
+                <input type="radio" id="status_in_progress" name="status" value="in_progress" 
+                    {% if work_order.status == 'in_progress' %}checked{% endif %}>
+                <label for="status_in_progress">In Progress</label>
+
+                <input type="radio" id="status_completed" name="status" value="completed" 
+                    {% if work_order.status == 'completed' %}checked{% endif %}>
+                <label for="status_completed">Completed</label>
+            </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary">Save Changes</button>
+    </form>
+</div>
+{% endblock %}

@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Initiate Work Order | EM Software{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Form Container */
+    .form-container {
+        max-width: 600px;
+        margin: 20px auto;
+        padding: 20px;
+        background: #fff;
+        border-radius: 8px;
+        box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    /* Form Styling */
+    .form-group {
+        margin-bottom: 15px;
+    }
+
+    .form-control {
+        width: 100%;
+        padding: 8px 12px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        font-size: 14px;
+    }
+
+    .form-control:focus {
+        border-color: #007bff;
+        outline: none;
+        box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+    }
+
+    label {
+        font-weight: 500;
+        display: block;
+        margin-bottom: 5px;
+        font-size: 14px;
+        color: #333;
+    }
+
+    /* Read-Only Input Fields */
+    input[readonly], select[readonly] {
+        background-color: #e9ecef;
+        cursor: not-allowed;
+    }
+
+    /* Submit Button */
+    .btn-primary {
+        width: 100%;
+        padding: 10px;
+        background-color: #007bff;
+        border-color: #007bff;
+        color: white;
+        font-size: 16px;
+        font-weight: 500;
+        border-radius: 4px;
+        transition: background-color 0.2s ease-in-out;
+    }
+
+    .btn-primary:hover {
+        background-color: #0056b3;
+        border-color: #004085;
+    }
+
+    /* Responsive Design */
+    @media (max-width: 768px) {
+        .form-container {
+            max-width: 90%;
+            padding: 15px;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="form-container">
+    <h2 class="text-center">Initiate Work Order</h2>
+
+    <form method="post">
+        {% csrf_token %}
+
+        <!-- Project ID (Read-Only) -->
+        <div class="form-group">
+            <label for="{{ form.project_id.id_for_label }}">Project ID:</label>
+            {{ form.project_id }}
+        </div>
+
+        <!-- Render All Fields Automatically -->
+        <div class="form-group">
+            {{ form.as_p }}
+        </div>
+
+        <!-- Submit Button -->
+        <button type="submit" class="btn btn-primary">Initiate Work Order</button>
+    </form>
+</div>
+{% endblock %}
