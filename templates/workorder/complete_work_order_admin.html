@@ -1,0 +1,188 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ work_order.wo_id }} - {% if work_order.status != 'completed' %}Edit{% else %}Complete{% endif %} Work Order | EM Software{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Form Container */
+    .form-container {
+        max-width: 600px;
+        margin: 20px auto;
+        padding: 20px;
+        background: #fff;
+        border-radius: 8px;
+        box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    /* Form Styling */
+    .form-group {
+        margin-bottom: 15px;
+    }
+
+    .form-control {
+        width: 100%;
+        padding: 8px 12px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        font-size: 14px;
+    }
+
+    .form-control:focus {
+        border-color: #007bff;
+        outline: none;
+        box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+    }
+
+    label {
+        font-weight: 500;
+        display: block;
+        margin-bottom: 5px;
+        font-size: 14px;
+        color: #333;
+    }
+
+    /* Read-Only Input Fields */
+    input[readonly], select[readonly] {
+        background-color: #e9ecef;
+        cursor: not-allowed;
+    }
+
+    /* Buttons */
+    .btn-primary, .btn-success {
+        width: 100%;
+        padding: 10px;
+        font-size: 16px;
+        font-weight: 500;
+        border-radius: 4px;
+        transition: background-color 0.2s ease-in-out;
+    }
+
+    .btn-success {
+        background-color: #28a745;
+        border-color: #28a745;
+        color: white;
+    }
+
+    .btn-success:hover {
+        background-color: #218838;
+        border-color: #1e7e34;
+    }
+
+    /* Slider Styles */
+    .status-slider-container {
+        text-align: center;
+    }
+
+    input[type="range"] {
+        width: 100%;
+        -webkit-appearance: none;
+        appearance: none;
+        background: transparent;
+        cursor: pointer;
+    }
+
+    input[type="range"]::-webkit-slider-runnable-track {
+        width: 100%;
+        height: 8px;
+        background: #ddd;
+        border-radius: 4px;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 16px;
+        height: 16px;
+        background: #007bff;
+        border-radius: 50%;
+        margin-top: -4px;
+    }
+
+    input[type="range"]::-moz-range-track {
+        width: 100%;
+        height: 8px;
+        background: #ddd;
+        border-radius: 4px;
+    }
+
+    input[type="range"]::-moz-range-thumb {
+        width: 16px;
+        height: 16px;
+        background: #007bff;
+        border-radius: 50%;
+    }
+
+    .status-labels {
+        display: flex;
+        justify-content: space-between;
+        font-size: 14px;
+        color: #333;
+        margin-top: 5px;
+    }
+
+    /* Responsive Design */
+    @media (max-width: 768px) {
+        .form-container {
+            max-width: 90%;
+            padding: 15px;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="form-container">
+    <h2 class="text-center">{% if work_order.status != 'completed' %}Edit{% else %}Complete{% endif %} Work Order: {{ work_order.wo_id }}</h2>
+
+    <form method="post">
+        {% csrf_token %}
+
+        <div class="form-group">
+            {{ form.worker.label_tag }}
+            {{ form.worker }}
+        </div>
+
+        <div class="form-group">
+            {{ form.submitted_date.label_tag }}
+            {{ form.submitted_date }}
+        </div>
+
+        <!-- Status Slider -->
+        <div class="form-group status-slider-container">
+            <label for="status-slider">Status</label>
+            <input type="range" id="status-slider" min="0" max="2" step="1"
+                   value="{% if work_order.status == 'pending' %}0{% elif work_order.status == 'in_progress' %}1{% else %}2{% endif %}"
+                   class="form-control">
+            <input type="hidden" id="status-hidden" name="status" value="{{ work_order.status }}">
+
+            <div class="status-labels">
+                <span>Initiated</span>
+                <span>In Progress</span>
+                <span>Completed</span>
+            </div>
+        </div>
+
+        <div class="form-group">
+            {{ form.remarks.label_tag }}
+            {{ form.remarks }}
+        </div>
+            <button type="submit" class="btn btn-success">Save Changes</button>
+    </form>
+</div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const statusSlider = document.getElementById("status-slider");
+        const statusHidden = document.getElementById("status-hidden");
+
+        const statuses = ["pending", "in_progress", "completed"];
+        
+        function updateStatus() {
+            statusHidden.value = statuses[statusSlider.value];
+        }
+
+        statusSlider.addEventListener("input", updateStatus);
+        updateStatus();
+    });
+</script>
+{% endblock %}
