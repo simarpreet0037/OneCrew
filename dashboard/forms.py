@@ -1,3 +1,4 @@
+from django import forms
 from .models import Employee, NewHire
 from dashboard.models import JobMaster, ProjectMaster, WorkOrder
 
@@ -7,6 +8,9 @@ class EmployeeUploadForm(forms.Form):
         widget=forms.FileInput(attrs={'accept': '.xlsx, .xls'}),
     )
     
+from django import forms
+from .models import Employee
+
 from django import forms
 from .models import Employee
 
@@ -97,7 +101,7 @@ class JobMasterForm(forms.ModelForm):
 
 # create a project
 from django import forms
-from dashboard.models import ProjectMaster
+from core.models import ProjectMaster
 
 class ProjectMasterForm(forms.ModelForm):
     class Meta:
@@ -149,7 +153,7 @@ class CompleteWorkOrderForm(forms.ModelForm):
 # forms.py for sign-up
 from django import forms
 from django.contrib.auth import get_user_model
-from OneCrew.settings import SIGNUP_SECRET_KEY
+from EMS.settings import SIGNUP_SECRET_KEY, SUPERUSER_SECRET_KEY
 
 User = get_user_model()
 
@@ -180,12 +184,11 @@ class SignupForm(forms.ModelForm):
         if password and confirm_password and password != confirm_password:
             self.add_error("confirm_password", "Passwords do not match.")
 
-        # Validate the secret key
-        if secret_key != SIGNUP_SECRET_KEY:
+        # Validate the secret key for either user or superuser
+        if secret_key not in [SIGNUP_SECRET_KEY, SUPERUSER_SECRET_KEY]:
             self.add_error("secret_key", "Invalid secret key. Please contact the administrator.")
 
         return cleaned_data
-    
 
 class EditOrCompleteWorkOrderForm(forms.ModelForm):
     submitted_date = forms.DateField(
