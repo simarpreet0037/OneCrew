@@ -1,0 +1,166 @@
+/* Employee Upload Page Styles */
+.main-content {
+    padding: 20px;
+    background-color: #f9f9f9;
+    min-height: calc(100vh - 60px);
+}
+
+.content-header h2 {
+    font-size: 24px;
+    color: #333;
+    margin-bottom: 20px;
+}
+
+.upload-container {
+    background-color: #fff;
+    border-radius: 5px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+.error-message {
+    background-color: #fff;
+    border-radius: 5px;
+    padding: 15px;
+    margin-bottom: 20px;
+}
+
+.error-message p {
+    color: #ff0000;
+    font-weight: bold;
+}
+
+.upload-section {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+    flex-wrap: wrap;
+}
+
+.excel-form {
+    flex: 1;
+}
+
+.upload-form {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.file-selection {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.file-selection label {
+    font-weight: 500;
+}
+
+.form-actions {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    margin-top: 15px;
+}
+
+.employee-dropdown {
+    padding: 8px 12px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    min-width: 200px;
+}
+
+.bulk-upload-btn {
+    background-color: #0066cc;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 8px 16px;
+    cursor: pointer;
+    font-weight: 500;
+}
+
+.bulk-upload-btn:hover {
+    background-color: #0052a3;
+}
+
+.download-section {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.download-btn {
+    background-color: #0066cc;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 8px 16px;
+    cursor: pointer;
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.download-btn:hover {
+    background-color: #0052a3;
+}
+
+.invalid-data {
+    margin: 20px 0;
+}
+
+.invalid-data-title {
+    color: #ff0000;
+    font-weight: bold;
+}
+
+.data-table h3 {
+    font-size: 18px;
+    margin-bottom: 15px;
+    color: #333;
+}
+
+.uploaded-data-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.uploaded-data-table th,
+.uploaded-data-table td {
+    border: 1px solid #ddd;
+    padding: 8px 12px;
+    text-align: left;
+}
+
+.uploaded-data-table th {
+    background-color: #f2f2f2;
+    font-weight: 500;
+}
+
+.uploaded-data-table tr:nth-child(even) {
+    background-color: #f9f9f9;
+}
+
+.uploaded-data-table tr:hover {
+    background-color: #f1f1f1;
+}
+
+@media screen and (max-width: 768px) {
+    .upload-section {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 20px;
+    }
+    
+    .download-section {
+        margin-top: 15px;
+    }
+    
+    .uploaded-data-table {
+        overflow-x: auto;
+        display: block;
+    }
+}

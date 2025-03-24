@@ -196,155 +196,18 @@ input[type="file"] {
     width: 60px;
 }
 
-/* Modal styles */
-.modal {
-    display: none;
-    position: fixed;
-    z-index: 1000;
-    left: 0;
-    top: 0;
-    width: 100%;
-    height: 100%;
-    overflow: auto;
-    background-color: rgba(0, 0, 0, 0.5);
-}
 
-.modal-content {
-    background-color: #fefefe;
-    margin: 5% auto;
-    padding: 20px;
-    border: 1px solid #888;
-    border-radius: 6px;
-    width: 80%;
-    max-width: 800px;
-    max-height: 80vh;
-    overflow-y: auto;
-}
-
-.close-btn {
-    color: #aaa;
-    float: right;
-    font-size: 28px;
-    font-weight: bold;
-    cursor: pointer;
-}
-
-.close-btn:hover,
-.close-btn:focus {
-    color: black;
-    text-decoration: none;
-    cursor: pointer;
-}
-
-/* Employee details view styles */
-.employee-info {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-    gap: 15px;
-}
-
-.info-item {
-    padding: 8px;
-    border-bottom: 1px solid #eee;
-}
-
-.info-item strong {
-    display: block;
-    color: #333;
-    font-size: 14px;
-}
-
-.info-item span {
-    display: block;
-    padding: 4px 0;
-    color: #555;
-}
-
-/* Employee edit form styles */
-.employee-edit-form {
-    max-height: 70vh;
-    overflow-y: auto;
-}
-
-.form-group {
-    margin-bottom: 15px;
-}
-
-.form-group label {
-    display: block;
-    margin-bottom: 5px;
-    font-weight: bold;
-    color: #333;
-}
-
-.form-group input,
-.form-group select,
-.form-group textarea {
-    width: 100%;
-    padding: 8px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    box-sizing: border-box;
-}
-
-.form-actions {
-    margin-top: 20px;
-    text-align: right;
-}
-
-.save-btn {
-    background-color: #4CAF50;
+.btn-edit {
+    background-color: #007bff;
     color: white;
-    border: none;
-    padding: 10px 20px;
-    text-align: center;
+    padding: 5px 10px;
     text-decoration: none;
-    display: inline-block;
-    font-size: 16px;
-    margin: 4px 2px;
-    cursor: pointer;
-    border-radius: 4px;
-}
-
-.save-btn:hover {
-    background-color: #45a049;
-}
-
-.loading {
-    text-align: center;
-    padding: 20px;
-    color: #666;
-}
-
-/* View and Edit buttons */
-.view-btn, .edit-btn {
-    padding: 4px 8px;
-    color: #fff;
-    text-decoration: none;
-    border-radius: 4px;
+    border-radius: 3px;
     display: inline-block;
 }
 
-.view-btn {
-    background-color: #3498db;
-}
-
-.edit-btn {
-    background-color: #f39c12;
-}
-
-.edit-btn1 {
-    background-color: #f39c12;
-    padding: 5px;
-    border-radius: 5px;
-}
-
-.view-btn:hover {
-    background-color: #2980b9;
-}
-
-.edit-btn:hover {
-    background-color: #e67e22;
+.btn-edit:hover {
+    background-color: #0056b3;
 }
 
 @media screen and (max-width: 768px) {
