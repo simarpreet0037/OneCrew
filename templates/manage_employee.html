@@ -8,82 +8,240 @@
 {% block content %}
 <h1 class="page-title">Manage Employee</h1>
 
-    <div class="upload-container1">
-        {% if error_message %}
-        <div class="error-message1">
-            <p>{{ error_message }}</p>
-        </div>
-        {% endif %}
-
-        <div class="upload-section">
-            <!-- Download section first -->
-            <div class="download-section">
-                <span>Download Excel Format</span>
-                <a href="" class="download-btn">Download</a>
-            </div>
-
-            <!-- File upload form below -->
-            <div class="excel-form">
-                <form method="post" action="{% url 'bulk-upload-employee' %}" enctype="multipart/form-data" class="upload-form">
-                    {% csrf_token %}
-                    <div class="file-selection">
-                        <label for="excel_file">Select a Valid Excel File To Upload :</label>
-                        <input type="file" name="excel_file" id="excel_file" accept=".xlsx, .xls">
-                    </div>
-                    
-                    <div class="form-actions">
-                        <div class="employee-select">
-                            <select name="employee_type" class="employee-dropdown">
-                                <option value="">New Employee</option>
-                                <!-- Add other options as needed -->
-                            </select>
-                        </div>
-                        <button type="submit" class="bulk-upload-btn">Bulk Upload</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-
-        {% if invalid_data %}
-        <div class="invalid-data">
-            <p class="invalid-data-title">These Are Invalid Data List Or Not Found :</p>
-        </div>
-        {% endif %}
-
-        <div class="data-table">
-            <h3>Uploaded Data List</h3>
-            <table class="uploaded-data-table">
-                <thead>
+<div class="upload-container1">
+    <div class="data-table">
+        <h3>Uploaded Data List</h3>
+        <table class="uploaded-data-table">
+            <thead>
+                <tr>
+                    <th>S.No</th>
+                    <th>Edit</th>
+                    <th>View</th>
+                    <th>Employee ID</th>
+                    <th>Name</th>
+                    <th>Assigned Salary</th>
+                    <th>Status</th>
+                    <th>Project</th>
+                    <th>Email</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if uploaded_data %}
+                    {% for item in uploaded_data %}
                     <tr>
-                        <th>S.No</th>
-                        <th>Edit</th>
-                        <th>View</th>
-                        <th>AuthenticationId</th>
-                        <th>PostNo</th>
-                        <th>ControlNo</th>
-                        <th>Name</th>
+                        <td>{{ forloop.counter }}</td>
+                        <td>
+                            {% if request.user.is_superuser %}
+                                <a href="#" class="edit-btn" data-id="{{ item.employee_id }}">Edit</a>
+                            {% else %}
+                                <span class="edit-btn1">Edit</span>
+                            {% endif %}
+                        </td>
+                        <td><a href="#" class="view-btn" data-id="{{ item.employee_id }}">View</a></td>
+                        <td>{{ item.employee_id }}</td> <!-- Employee ID -->
+                        <td>{{ item.name }}</td> <!-- Employee Name -->
+                        <td>{{ item.assigned_salary }}</td> <!-- Assigned Salary -->
+                        <td>{{ item.employee_status }}</td> <!-- Employee Status -->
+                        <td>{{ item.project }}</td> <!-- Project Name -->
+                        <td>{{ item.email }}</td> <!-- Employee Email -->
                     </tr>
-                </thead>
-                <tbody>
-                    {% if uploaded_data %}
-                        {% for item in uploaded_data %}
-                        <tr>
-                            <td>{{ forloop.counter }}</td>
-                            <td><a href="">Edit</a></td>
-                            <td><a href="">View</a></td>
-                            <td>{{ item.AuthenticationId }}</td>
-                            <td>{{ item.PoolNo }}</td>
-                            <td>{{ item.ControlNo }}</td>
-                            <td>{{ item.Name }}</td>
-                        </tr>
-                        {% endfor %}
-                    {% else %}
-                        <tr>
-                            <td colspan="8">No records to display.</td>
-                        </tr>
-                    {% endif %}
-                </tbody>
-            </table>
+                    {% endfor %}
+                {% else %}
+                    <tr>
+                        <td colspan="9">No records to display.</td>
+                    </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- View Employee Modal -->
+<div class="modal" id="viewEmployeeModal">
+    <div class="modal-content">
+        <span class="close-btn">&times;</span>
+        <h2>Employee Details</h2>
+        <div class="employee-details">
+            <div id="view-employee-data">
+                <div class="loading">Loading...</div>
+            </div>
         </div>
     </div>
+</div>
+
+<!-- Edit Employee Modal -->
+<div class="modal" id="editEmployeeModal">
+    <div class="modal-content">
+        <span class="close-btn">&times;</span>
+        <h2>Edit Employee</h2>
+        <div class="employee-edit-form">
+            <form id="employee-edit-form" method="post">
+                {% csrf_token %}
+                <div id="edit-employee-data">
+                    <div class="loading">Loading...</div>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="save-btn">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // View Employee Modal
+        const viewModal = document.getElementById('viewEmployeeModal');
+        const viewButtons = document.querySelectorAll('.view-btn');
+        const viewCloseBtn = viewModal.querySelector('.close-btn');
+        
+        viewButtons.forEach(button => {
+            button.addEventListener('click', function(e) {
+                e.preventDefault();
+                const employeeId = this.getAttribute('data-id');
+                fetch(`/employee/${employeeId}/view/`)
+                    .then(response => response.json())
+                    .then(data => {
+                        const viewData = document.getElementById('view-employee-data');
+                        if (data.employee) {
+                            let html = '<div class="employee-info">';
+                            // Dynamically display employee information based on the returned data
+                            for (const [key, value] of Object.entries(data.employee)) {
+                                if (key !== 'employee_id' && key !== 'created_at' && key !== 'updated_at') {
+                                    html += `<div class="info-item">
+                                        <strong>${formatFieldName(key)}:</strong> 
+                                        <span>${value !== null ? value : 'N/A'}</span>
+                                    </div>`;
+                                }
+                            }
+                            html += '</div>';
+                            viewData.innerHTML = html;
+                        } else {
+                            viewData.innerHTML = '<p>Failed to load employee data.</p>';
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        document.getElementById('view-employee-data').innerHTML = 
+                            '<p>Error loading employee data. Please try again.</p>';
+                    });
+                viewModal.style.display = 'block';
+            });
+        });
+        
+        viewCloseBtn.addEventListener('click', function() {
+            viewModal.style.display = 'none';
+        });
+
+        // Edit Employee Modal
+        const editModal = document.getElementById('editEmployeeModal');
+        const editButtons = document.querySelectorAll('.edit-btn');
+        const editCloseBtn = editModal.querySelector('.close-btn');
+        const editForm = document.getElementById('employee-edit-form');
+        
+        editButtons.forEach(button => {
+            button.addEventListener('click', function(e) {
+                e.preventDefault();
+                const employeeId = this.getAttribute('data-id');
+                fetch(`/employee/${employeeId}/edit/`)
+                    .then(response => response.json())
+                    .then(data => {
+                        const editData = document.getElementById('edit-employee-data');
+                        if (data.employee) {
+                            let html = `<input type="hidden" name="employee_id" value="${data.employee.employee_id}">`;
+                            for (const [key, value] of Object.entries(data.employee)) {
+                                if (key !== 'employee_id' && key !== 'created_at' && key !== 'updated_at') {
+                                    html += `<div class="form-group">
+                                        <label for="${key}">${formatFieldName(key)}:</label>`;
+                                    
+                                    // Dynamically create form fields based on the field type
+                                    if (key.includes('Date')) {
+                                        html += `<input type="date" id="${key}" name="${key}" value="${value !== null ? formatDate(value) : ''}">`;
+                                    } else if (key.includes('Time')) {
+                                        html += `<input type="time" id="${key}" name="${key}" value="${value !== null ? value : ''}">`;
+                                    } else if (key === 'employee_status') {
+                                        html += `<select id="${key}" name="${key}">
+                                            <option value="true" ${value === true ? 'selected' : ''}>Active</option>
+                                            <option value="false" ${value === false ? 'selected' : ''}>Inactive</option>
+                                        </select>`;
+                                    } else if (key === 'assigned_salary') {
+                                        html += `<input type="number" step="0.01" id="${key}" name="${key}" value="${value !== null ? value : ''}">`;
+                                    } else {
+                                        html += `<input type="text" id="${key}" name="${key}" value="${value !== null ? value : ''}">`;
+                                    }
+                                    
+                                    html += `</div>`;
+                                }
+                            }
+                            editData.innerHTML = html;
+                        } else {
+                            editData.innerHTML = '<p>Failed to load employee data for editing.</p>';
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        document.getElementById('edit-employee-data').innerHTML = 
+                            '<p>Error loading employee data. Please try again.</p>';
+                    });
+                editModal.style.display = 'block';
+            });
+        });
+        
+        editCloseBtn.addEventListener('click', function() {
+            editModal.style.display = 'none';
+        });
+        
+        editForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const formData = new FormData(editForm);
+            const employeeId = formData.get('employee_id');
+            fetch(`/employee/${employeeId}/update/`, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Employee updated successfully!');
+                    window.location.reload();
+                } else {
+                    alert('Failed to update employee: ' + data.error);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error updating employee. Please try again.');
+            });
+        });
+
+        // Helper functions
+        function formatFieldName(key) {
+            return key.replace(/([A-Z])/g, ' $1').trim();
+        }
+        
+        function formatDate(dateString) {
+            try {
+                const date = new Date(dateString);
+                return date.toISOString().split('T')[0];
+            } catch (e) {
+                return '';
+            }
+        }
+        
+        // Close modals when clicking outside
+        window.addEventListener('click', function(event) {
+            if (event.target === viewModal) {
+                viewModal.style.display = 'none';
+            }
+            if (event.target === editModal) {
+                editModal.style.display = 'none';
+            }
+        });
+    });
+</script>
+{% endblock %}
 {% endblock %}
