@@ -1,6 +1,7 @@
 {% load static %}
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -15,14 +16,17 @@
             flex-direction: column;
             min-height: 100vh;
         }
+
         .nav-menu {
             flex: 1;
         }
+
         .logout-container {
             padding: 15px;
             border-top: 1px solid #eee;
             background-color: #f9f9f9;
         }
+
         .logout-btn {
             display: flex;
             align-items: center;
@@ -31,22 +35,24 @@
             text-decoration: none;
             font-weight: bold;
         }
+
         .logout-btn i {
             margin-right: 10px;
         }
     </style>
 </head>
+
 <body>
     <div class="container">
         <!-- Sidebar -->
         <div class="sidebar">
             <div class="logo-container">
-                <h1 class="logo">EM Software</h1>
+                <h1 class="logo">OneCrew</h1>
                 <button class="menu-toggle">
                     <i class="fas fa-bars"></i>
                 </button>
             </div>
-            
+
             <div class="quick-links">
                 <h2>Quick Links</h2>
                 <div class="quick-link-buttons">
@@ -56,7 +62,7 @@
                     <a href="#" class="quick-link-btn orange"><i class="fas fa-bell"></i></a>
                 </div>
             </div>
-            
+
             <div class="nav-menu">
                 <ul>
                     <li class="nav-item">
@@ -77,9 +83,12 @@
                         </a>
                         <ul class="submenu">
                             <li><a href="{% url 'job_master' %}"><i class="fas fa-angle-right"></i> Jobs</a></li>
-                            <li><a href="{% url 'manage-employee' %}"><i class="fas fa-angle-right"></i> Manage Employees</a></li>
-                            <li><a href="{% url 'recruitment-summary' %}"><i class="fas fa-angle-right"></i> Recruitment Summary</a></li>
-                            <li><a href="{% url 'workorder-list' %}"><i class="fas fa-angle-right"></i> Work Order Management</a></li>
+                            <li><a href="{% url 'manage-employee' %}"><i class="fas fa-angle-right"></i> Manage
+                                    Employees</a></li>
+                            <li><a href="{% url 'recruitment-summary' %}"><i class="fas fa-angle-right"></i> Recruitment
+                                    Summary</a></li>
+                            <li><a href="{% url 'workorder-list' %}"><i class="fas fa-angle-right"></i> Work Order
+                                    Management</a></li>
                         </ul>
                     </li>
                     <li class="nav-item">
@@ -89,13 +98,15 @@
                             <i class="fas fa-chevron-right toggle-icon"></i>
                         </a>
                         <ul class="submenu">
-                            <li><a href="{% url 'worker_work_orders' %}"><i class="fas fa-angle-right"></i>My Workorders</a></li>
-                            <li><a href="{% url 'employee-profile' %}"><i class="fas fa-angle-right"></i>My Profile</a></li>
+                            <li><a href="{% url 'worker_work_orders' %}"><i class="fas fa-angle-right"></i>My
+                                    Workorders</a></li>
+                            <li><a href="{% url 'employee-profile' %}"><i class="fas fa-angle-right"></i>My Profile</a>
+                            </li>
                         </ul>
                     </li>
                 </ul>
             </div>
-            
+            <div id="notificationDiv"></div>
             <!-- Logout Button Fixed at Bottom -->
             <div class="logout-container">
                 <a href="{% url 'logout' %}" class="logout-btn">
@@ -104,7 +115,7 @@
                 </a>
             </div>
         </div>
-        
+
         <!-- Main Content -->
         <div class="main-content">
             <div class="top-bar">
@@ -124,15 +135,105 @@
                     </a>
                 </div>
             </div>
-            
+
             <div class="content-body">
                 {% block content %}{% endblock %}
             </div>
         </div>
     </div>
     
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
-    <script src="{% static 'js/main.js' %}"></script>
-    {% block extra_js %}{% endblock %}
 </body>
 </html>
+{% block extra_js %}
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+<script>
+$(document).ready(function () {
+    let lastShownWorkOrderId = sessionStorage.getItem("lastShownWorkOrderId") || null;
+
+    function fetchLatestWorkOrder() {
+        $.ajax({
+            url: "{% url 'get_latest_work_order' %}",  
+            type: "GET",
+            success: function (data) {
+                if (data.work_order_id && data.work_order_id !== lastShownWorkOrderId) {
+                    lastShownWorkOrderId = data.work_order_id;
+                    sessionStorage.setItem("lastShownWorkOrderId", lastShownWorkOrderId);
+                    showNotificationPopup(data);
+                }
+            },
+            error: function (xhr, status, error) {
+                console.error("Error fetching work order:", error);
+            }
+        });
+    }
+
+    function showNotificationPopup(data) {
+        let notificationHtml = `
+            <div id="workOrderPopup" class="popup">
+                <div class="popup-content">
+                    <span class="close-btn">&times;</span>
+                    <h3>New Work Order Assigned</h3>
+                    <p><strong>Job:</strong> ${data.job_name}</p>
+                    <p><strong>Status:</strong> ${data.status}</p>
+                    <p><strong>Description:</strong> ${data.wo_description}</p>
+                </div>
+            </div>
+        `;
+        $("body").append(notificationHtml);
+        $("#workOrderPopup").fadeIn();
+    }
+
+    // Close pop-up and persist state
+    $(document).on("click", ".close-btn", function () {
+        $("#workOrderPopup").fadeOut(function () {
+            $(this).remove();
+        });
+
+        sessionStorage.setItem("notificationClosed", "true");  // Mark notification as closed
+    });
+
+    // Restore notification state on page load
+    if (sessionStorage.getItem("notificationClosed") !== "true") {
+        fetchLatestWorkOrder();
+    }
+
+    setInterval(fetchLatestWorkOrder, 5000);
+});
+
+</script>
+
+<style>
+/* Pop-up styling */
+.popup {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    width: 350px;
+    padding: 15px;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 2px 2px 15px rgba(0, 0, 0, 0.3);
+    display: none;
+    z-index: 1000;
+}
+
+.popup-content {
+    position: relative;
+    padding: 10px;
+}
+
+.popup .close-btn {
+    position: absolute;
+    top: 5px;
+    right: 10px;
+    font-size: 20px;
+    cursor: pointer;
+    color: red;
+}
+
+.popup h3 {
+    font-size: 16px;
+    margin-bottom: 10px;
+}
+</style>
+    {% endblock %}

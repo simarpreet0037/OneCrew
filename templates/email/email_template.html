@@ -12,12 +12,14 @@
 </head>
 <body>
     <div class="container">
-        <h2>New Work Order Assigned</h2>
-        <p>A new work order has been assigned to you:</p>
+        <h2>New Work Order Update</h2>
+        <p>Workorder has been recently changed:</p>
         <div class="details">
-            <p><strong>Title:</strong> {{ work_order.title }}</p>
-            <p><strong>Description:</strong> {{ work_order.description }}</p>
-            <p><strong>Assigned To:</strong> {{ work_order.assigned_to }}</p>
+            <h3><strong>Status:</strong> {{ work_order.status }}</h3>
+            <p><strong>Job:</strong> {{ work_order.job }}</p>
+            <p><strong>Description:</strong> {{ work_order.wo_description }}</p>
+            <p><strong>Remarks:</strong> {{ work_order.remarks }}</p>
+            <p><strong>Assigned By:</strong> {{ work_order.user.employee.name }}</p>
         </div>
         <p>Please check your dashboard for more details.</p>
         <div class="footer">This is an automated email. Please do not reply.</div>
