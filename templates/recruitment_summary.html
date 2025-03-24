@@ -1,0 +1,149 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/recruitment_styles.css' %}">
+{% endblock %}
+
+{% block content %}
+<h1 class="page-title">Recruitment Summary</h1>
+
+<div class="report-container">
+    <div class="report-header">
+        <h3>Work Order Report</h3>
+    </div>
+
+    <form method="post" action="{% url 'recruitment-summary' %}">
+        {% csrf_token %}
+        <div class="filter-section">
+            <div class="filter-row">
+                <div class="filter-item">
+                    <div class="select-wrapper">
+                        <label>Users</label>
+                        <select id="user" name="user" class="filter-select">
+                            <option value="all" {% if selected_user_id == "all" %}selected{% endif %}>All Users</option>
+                            {% for user in all_users %}
+                                <option value="{{ user.id }}" {% if user.id|stringformat:"s" == selected_user_id %}selected{% endif %}>{{ user.email }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="filter-item">
+                    <div class="select-wrapper">
+                        <label>Projects</label>
+                        <select id="projects" name="projects" class="filter-select">
+                            <option value="all" selected>All Projects</option>
+                            {% for project in projects_list %}
+                                <option value="{{ project.project_id }}">{{ project.project_name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="filter-item">
+                    <div class="select-wrapper">
+                        <label>Arrival From</label>
+                        <input class="input_date" type="date" id="arrival_from" name="arrival_from" value="{{ arrival_from }}">
+                    </div>
+                </div>
+                <div class="filter-item">
+                    <div class="select-wrapper">
+                        <label>Arrival To</label>
+                        <input class="input_date" type="date" id="arrival_to" name="arrival_to" value="{{ arrival_to }}">
+                    </div>  
+                </div>
+            </div>
+            <div class="button-row">
+                <button type="submit" class="btn-filter">Filter</button>
+                <button type="submit" formaction="{% url 'export-recruitment-summary' %}" class="btn-export">Export</button>
+            </div>
+        </div>
+    </form>
+
+    <div class="table-container">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Project</th>
+                    <th>Company</th>
+                    <th>Total Work Orders</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if projects_list %}
+                    {% for project in projects_list %}
+                    <tr>
+                        <td>{{ project.project_name }}</td>
+                        <td>{{ project.project_company }}</td>
+                        <td>{{ project.total_work_orders }}</td>
+                    </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr><td colspan="3">No data available</td></tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+    
+    <div class="chart-container">
+        <h3>Work Order Summary</h3>
+        {% if use_chart_js %}
+            <canvas id="workorderChart" height="300"></canvas>
+        {% else %}
+            <div class="chart-placeholder">
+                <img src="{% static 'images/chart_placeholder.png' %}" alt="Work Order Chart" class="chart-image">
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+{% if use_chart_js %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.7.0/chart.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const ctx = document.getElementById('workorderChart').getContext('2d');
+    
+    const projectNames = [{% for project in projects_list %}"{{ project.project_name }}",{% endfor %}];
+    const totalWorkOrders = [{% for project in projects_list %}{{ project.total_work_orders }},{% endfor %}];
+
+    const sampleProjectNames = ['Project A', 'Project B', 'Project C', 'Project D'];
+    const sampleWorkOrders = [5, 15, 25, 35];
+
+    const finalProjectNames = projectNames.length > 0 ? projectNames : sampleProjectNames;
+    const finalWorkOrders = totalWorkOrders.length > 0 ? totalWorkOrders : sampleWorkOrders;
+
+    new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: finalProjectNames,
+            datasets: [{
+                label: 'Total Work Orders',
+                data: finalWorkOrders,
+                backgroundColor: 'rgba(54, 162, 235, 0.5)',
+                borderColor: 'rgba(54, 162, 235, 1)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Total Work Orders'
+                    }
+                },
+                x: {
+                    title: {
+                        display: true,
+                        text: 'Project Name'
+                    }
+                }
+            }
+        }
+    });
+});
+</script>
+{% endif %}
+{% endblock %}
