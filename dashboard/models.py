@@ -2,6 +2,20 @@ from django.conf import settings
 from django.db import models
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
 
+
+
+from django.db import models
+from django.conf import settings
+from django.core.mail import EmailMultiAlternatives
+from django.template.loader import render_to_string
+from django.utils.html import strip_tags
+from email.mime.image import MIMEImage
+import os
+import json
+from abc import ABC, abstractmethod
+
+
+
 # --------------------- Custom User Model ---------------------
 class CustomUserManager(BaseUserManager):
     def create_user(self, email, password=None, **extra_fields):
@@ -78,7 +92,7 @@ class Employee(models.Model):
     gender = models.CharField(max_length=50, null=True, blank=True)
     date_of_birth = models.DateField(null=True, blank=True)
     passport_no = models.CharField(max_length=50, null=True, blank=True)
-    native_license_status = models.CharField(max_length=50, null=True, blank=True)
+    native_license_expiry = models.DateField(null=True, blank=True)
     assigned_salary = models.DecimalField(max_digits=18, decimal_places=2, default=0.00)
     recruitment_remarks = models.CharField(max_length=100, null=True, blank=True)
     employee_status = models.BooleanField(default=True)
@@ -108,7 +122,21 @@ class EmployeeFactory:
 
         return Employee.objects.create(**employee_data)
 
-# --------------------- Work Order Model ---------------------
+# =============================
+# Abstract Observer Class
+# =============================
+
+class Observer(ABC):
+    """Abstract Observer class that defines the update method."""
+    
+    @abstractmethod
+    def update(self, work_order):
+        pass
+
+# =============================
+# WorkOrder Model (Observable)
+# =============================
+
 class WorkOrder(models.Model):
     STATUS_CHOICES = [
         ('initiated', 'Initiated'),
@@ -120,8 +148,8 @@ class WorkOrder(models.Model):
     address = models.CharField(max_length=255, blank=True, null=True)
     days_taken = models.IntegerField(blank=True, null=True)
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="work_orders")
-    project = models.ForeignKey(ProjectMaster, on_delete=models.CASCADE, related_name="work_orders", blank=True, null=True)
-    job = models.ForeignKey(JobMaster, on_delete=models.CASCADE, related_name="work_orders", blank=True, null=True)
+    project = models.ForeignKey("ProjectMaster", on_delete=models.CASCADE, related_name="work_orders", blank=True, null=True)
+    job = models.ForeignKey("JobMaster", on_delete=models.CASCADE, related_name="work_orders", blank=True, null=True)
     worker = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="worker_work_orders")
     wo_description = models.TextField(blank=True, null=True)
     requested_date = models.DateField(blank=True, null=True)
@@ -131,29 +159,172 @@ class WorkOrder(models.Model):
     remarks = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
+    _observers = []  # List to store observers
+
     def __str__(self):
-        return f"WorkOrder {self.wo_no} ({self.get_status_display()})"
-    
+        return f"WorkOrder {self.wo_id} ({self.get_status_display()})"
+
+    # Attach an observer
+    def attach(self, observer):
+        if observer not in self._observers:
+            self._observers.append(observer)
+
+    # Detach an observer
+    def detach(self, observer):
+        if observer in self._observers:
+            self._observers.remove(observer)
+
+    # Notify all observers
+    def notify(self):
+        for observer in self._observers:
+            observer.update(self)
+
+    def save(self, *args, **kwargs):
+        """
+        Override save method to notify observers whenever a WorkOrder is updated.
+        """
+        super().save(*args, **kwargs)  # Save the object first
+        self.notify()  # Notify observers after save
+
+
+
+
+
+# =============================
+# Email Notification Observer
+# =============================
+
+class Notification(Observer):
+    """Observer that sends an email when a WorkOrder is updated."""
+
+    _last_notified_states = {}  # Dictionary to store last notified state per WorkOrder
+
+    def update(self, work_order):
+        work_order_id = work_order.wo_id
+        
+        # Get last notified state
+        last_state = self._last_notified_states.get(work_order_id, {})
+
+        # Extract the current state
+        current_state = {
+            "title": work_order.wo_description,
+            "address": work_order.address,
+            "status": work_order.status,
+            "assigned_to": work_order.worker.employee.name if work_order.worker else None,
+            "email": work_order.worker.email if work_order.worker else None  # Fetching email from worker
+}
+
+        # Check if WorkOrder has changed
+        if last_state != current_state:
+            print(f"Changes detected in WorkOrder {work_order.wo_id}. Sending email notification.")
+
+            subject = f"Work Order Updated: {work_order.wo_description}".replace("\r", "").replace("\n", "")
+            html_content = render_to_string('email/email_template.html', {'work_order': work_order})
+            text_content = strip_tags(html_content)
+
+            if work_order.worker and work_order.worker.email:
+                email = EmailMultiAlternatives(subject, text_content, settings.EMAIL_HOST_USER, [work_order.worker.email])
+                email.attach_alternative(html_content, "text/html")
+
+                # Attach footer banner image as inline image
+                image_path = os.path.join(settings.STATICFILES_DIRS[0], "dashboard/footer_banner.jpg")
+
+                try:
+                    with open(image_path, 'rb') as img:
+                        mime_image = MIMEImage(img.read(), _subtype="jpg")
+                        mime_image.add_header('Content-ID', '<footer_banner>')
+                        mime_image.add_header("Content-Disposition", "inline", filename="footer_banner.jpg")
+                        email.attach(mime_image)
+                except FileNotFoundError:
+                    print("Warning: Footer banner image not found!")
+
+                email.send()
+
+            # Update the last notified state
+            self._last_notified_states[work_order_id] = current_state
+        else:
+            print(f"No significant changes detected for WorkOrder {work_order.wo_id}. No email sent.")
+
+# =============================
+# Dashboard Notification Observer
+# =============================
+
+class DashNotification(Observer):
+    """Observer that sends a JSON notification for WorkOrder updates."""
+
+    _last_notified_states = {}  # Store last notified state per WorkOrder
+
+    def update(self, work_order):
+        work_order_id = work_order.wo_id
+        
+        # Get last notified state
+        last_state = self._last_notified_states.get(work_order_id, {})
+
+        # Extract the current state
+        current_state = {
+            "id": work_order.wo_id,
+            "title": work_order.wo_description,
+            "address": work_order.address,
+            "status": work_order.status,
+            "assigned_to": work_order.worker.username if work_order.worker else None,
+            "requested_date": str(work_order.requested_date),
+            "submitted_date": str(work_order.submitted_date) if work_order.submitted_date else None,
+            "remarks": work_order.remarks,
+        }
+
+        # Check if WorkOrder has changed
+        if last_state != current_state:
+            print(f"Changes detected in WorkOrder {work_order.wo_id}. Sending JSON notification.")
+
+            # Convert to JSON format
+            json_notification = json.dumps({
+                "type": "WorkOrderUpdate",
+                "data": current_state
+            }, indent=4)
+
+            # Simulate sending JSON notification (e.g., WebSocket, API)
+            print("Sending JSON Notification:")
+            print(json_notification)
+
+            # Update the last notified state
+            self._last_notified_states[work_order_id] = current_state
+        else:
+            print(f"No significant changes detected for WorkOrder {work_order.wo_id}. No JSON notification sent.")
+
+# =============================
+# WorkOrder Factory (Auto-Attaching Observers)
+# =============================
+
 class WorkOrderFactory:
     @staticmethod
     def create_work_order(job, user, address=""):
         """
         Factory method to create a work order with consistent initialization.
-        The only dynamic field at creation is `address`, the rest are prefilled.
         """
-        return WorkOrder.objects.create(
-            project=job.project,  # Ensure the project is assigned
-            job=job,  # Ensure the job is assigned
-            user=user,  # Ensure the user is assigned
+        work_order = WorkOrder.objects.create(
+            project=job.project,
+            job=job,
+            user=user,
             wo_description=f"Work order for {job.job_name}",
             requested_date=job.created_date,
-            address=address,  # Dynamically set address
+            address=address,
             days_taken=None,
             worker=None,
             submitted_date=None,
             status='initiated',
             remarks='',
         )
+
+        # Attach Observers
+        notification_observer = Notification()
+        dash_notification_observer = DashNotification()
+
+        work_order.attach(notification_observer)  # Attach email notifications
+        work_order.attach(dash_notification_observer)  # Attach JSON notifications
+
+        return work_order
+    
+
 
 # --------------------- New Hire Model ---------------------
 class NewHire(models.Model):
