@@ -1,0 +1,181 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/new_hire_management.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="content-wrapper">
+    <div class="page-header">
+        <h2>My Profile</h2>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <div class="initial-header">
+                <div><h3>Update Your Information</h3></div>
+                <div>
+                    <!-- Edit Profile Button -->
+                    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#profileUpdateModal">
+                        Edit Profile
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="card-body">
+            <table class="table table-bordered">
+                <tbody>
+                    <tr>
+                        <th>Email</th>
+                        <td>{{ employee.user.email|default:"N/A" }}</td>
+                    </tr>
+                    <tr>
+                        <th>Full Name</th>
+                        <td>{{ employee.name|default:"N/A" }}</td>
+                    </tr>
+                    <tr>
+                        <th>Gender</th>
+                        <td>{{ employee.gender|default:"N/A" }}</td>
+                    </tr>
+                    <tr>
+                        <th>Date of Birth</th>
+                        <td>{{ employee.date_of_birth|default:"N/A" }}</td>
+                    </tr>
+                    <tr>
+                        <th>Passport Number</th>
+                        <td>{{ employee.passport_no|default:"N/A" }}</td>
+                    </tr>
+                    <tr>
+                        <th>License Expiry</th>
+                        <td>{{ employee.native_license_expiry|default:"N/A" }}</td>
+                    </tr>
+                    <tr>
+                        <th>Recruitment Remarks</th>
+                        <td>{{ employee.recruitment_remarks|default:"N/A" }}</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Profile Update Modal -->
+<div class="modal fade" id="profileUpdateModal" tabindex="-1" aria-labelledby="profileUpdateModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="profileUpdateModalLabel">Update Profile</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form method="post" action="{% url 'employee-profile' %}">
+                    {% csrf_token %}
+                    
+                    <!-- Email Update -->
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group mb-3">
+                                <label for="email" class="form-label">Email</label>
+                                <input type="email" name="email" value="{{ employee.user.email }}" class="form-control" required>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Name & Gender -->
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group mb-3">
+                                <label for="name" class="form-label">Full Name</label>
+                                {{ form.name }}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group mb-3">
+                                <label for="gender" class="form-label">Gender</label>
+                                {{ form.gender }}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Date of Birth & Passport -->
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group mb-3">
+                                <label for="date_of_birth" class="form-label">Date of Birth</label>
+                                {{ form.date_of_birth }}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group mb-3">
+                                <label for="passport_no" class="form-label">Passport Number</label>
+                                {{ form.passport_no }}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- License Expiry & Recruitment Remarks -->
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group mb-3">
+                                <label for="native_license_status" class="form-label">License Expiry</label>
+                                {{ form.native_license_expiry }}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group mb-3">
+                                <label for="recruitment_remarks" class="form-label">Recruitment Remarks</label>
+                                {{ form.recruitment_remarks }}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Password Change -->
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group mb-3">
+                                <label for="password1" class="form-label">New Password</label>
+                                <input type="password" name="password1" class="form-control" placeholder="Enter new password">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group mb-3">
+                                <label for="password2" class="form-label">Confirm Password</label>
+                                <input type="password" name="password2" class="form-control" placeholder="Confirm new password">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                        <button type="submit" class="btn btn-primary">Save Changes</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- jQuery and Bootstrap JS -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+    $(document).ready(function() {
+        // Automatically open modal if form has validation errors
+        var formHasErrors = {% if form.errors %} true {% else %} false {% endif %};
+        if (formHasErrors) {
+            $('#profileUpdateModal').modal('show');
+        }
+
+        // Ensure Bootstrap modals work correctly when clicked
+        $('#profileUpdateModal').on('shown.bs.modal', function () {
+            $(this).find('input:first').focus(); // Focus on first input field when modal opens
+        });
+
+    });
+</script>
+{% endblock %}
