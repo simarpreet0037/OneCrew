@@ -218,7 +218,7 @@ class Notification(Observer):
         if last_state != current_state:
             print(f"Changes detected in WorkOrder {work_order.wo_id}. Sending email notification.")
 
-            subject = f"Work Order Updated: {work_order.wo_description}".replace("\r", "").replace("\n", "")
+            subject = f"Work Order Updated: {work_order.project}".replace("\r", "").replace("\n", "")
             html_content = render_to_string('email/email_template.html', {'work_order': work_order})
             text_content = strip_tags(html_content)
 
@@ -248,49 +248,59 @@ class Notification(Observer):
 # =============================
 # Dashboard Notification Observer
 # =============================
-
+from django.http import StreamingHttpResponse,JsonResponse
+import json
+import time
 class DashNotification(Observer):
-    """Observer that sends a JSON notification for WorkOrder updates."""
+    """Stores the latest WorkOrder update per user for AJAX requests."""
+    
+    _latest_updates = {}  # Stores the latest update per user
+    
+    @staticmethod
+    def update(work_order):
+        """Update the latest work order change per user."""
+        if not work_order.worker:
+            return
 
-    _last_notified_states = {}  # Store last notified state per WorkOrder
-
-    def update(self, work_order):
-        work_order_id = work_order.wo_id
-        
-        # Get last notified state
-        last_state = self._last_notified_states.get(work_order_id, {})
-
-        # Extract the current state
+        user_email = work_order.worker.email  # Identifying user by email
         current_state = {
-            "id": work_order.wo_id,
-            "title": work_order.wo_description,
-            "address": work_order.address,
-            "status": work_order.status,
-            "assigned_to": work_order.worker.username if work_order.worker else None,
-            "requested_date": str(work_order.requested_date),
-            "submitted_date": str(work_order.submitted_date) if work_order.submitted_date else None,
+            "work_order_id": work_order.wo_id,
+            "status": work_order.get_status_display(),
+            "job_name": work_order.job.job_name if work_order.job else "No Job",
+            "wo_description": work_order.wo_description,
             "remarks": work_order.remarks,
+            "address": work_order.address,
+            "assigned_by": work_order.user.email if work_order.user else "Admin",
+            "submitted_date": work_order.submitted_date.strftime('%Y-%m-%d') if work_order.submitted_date else "Pending",
         }
 
-        # Check if WorkOrder has changed
-        if last_state != current_state:
-            print(f"Changes detected in WorkOrder {work_order.wo_id}. Sending JSON notification.")
+        # Store the latest update per user
+        DashNotification._latest_updates[user_email] = current_state
 
-            # Convert to JSON format
-            json_notification = json.dumps({
-                "type": "WorkOrderUpdate",
-                "data": current_state
-            }, indent=4)
+from django.contrib.auth.decorators import login_required
+@login_required
+def get_latest_work_order(request):
+    """Fetch the most recent work order assigned to the logged-in user."""
+    user = request.user
 
-            # Simulate sending JSON notification (e.g., WebSocket, API)
-            print("Sending JSON Notification:")
-            print(json_notification)
+    # Get the most recent work order assigned to the user (sorted by created_at)
+    latest_work_order = WorkOrder.objects.filter(worker=user).order_by('-created_at').first()
 
-            # Update the last notified state
-            self._last_notified_states[work_order_id] = current_state
-        else:
-            print(f"No significant changes detected for WorkOrder {work_order.wo_id}. No JSON notification sent.")
-
+    if latest_work_order:
+        work_order_data = {
+            "work_order_id": latest_work_order.wo_id,
+            "status": latest_work_order.get_status_display(),
+            "job_name": latest_work_order.job.job_name if latest_work_order.job else "No Job",
+            "wo_description": latest_work_order.wo_description,
+            "remarks": latest_work_order.remarks,
+            "address": latest_work_order.address,
+            "assigned_by": latest_work_order.user.email if latest_work_order.user else "Admin",
+            "submitted_date": latest_work_order.submitted_date.strftime('%Y-%m-%d') if latest_work_order.submitted_date else "Pending",
+        }
+        return JsonResponse(work_order_data)
+    
+    return JsonResponse({"message": "No work orders found"})
+    
 # =============================
 # WorkOrder Factory (Auto-Attaching Observers)
 # =============================
