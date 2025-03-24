@@ -75,6 +75,7 @@
                             <li><a href="{% url 'dashboard' %}"><i class="fas fa-angle-right"></i> Dashboard</a></li>
                         </ul>
                     </li>
+                    {% if request.user.is_superuser %}
                     <li class="nav-item">
                         <a href="{% url 'job_master' %}">
                             <i class="fas fa-user-plus"></i>
@@ -91,6 +92,7 @@
                                     Management</a></li>
                         </ul>
                     </li>
+                    {% endif %}
                     <li class="nav-item">
                         <a href="{% url 'work-order' %}">
                             <i class="fas fa-tools"></i>

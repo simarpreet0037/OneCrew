@@ -37,7 +37,7 @@ class DashboardView(View):
         if request.user.is_superuser:
             work_orders = WorkOrder.objects.all()
         else:
-            work_orders = WorkOrder.objects.filter(user=request.user)
+            work_orders = WorkOrder.objects.filter(worker=request.user)
 
         # Filtering
         from_date = request.GET.get('from', (today - timedelta(days=30)).strftime('%Y-%m-%d'))
