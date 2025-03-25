@@ -357,3 +357,54 @@ class NewHire(models.Model):
 
     def __str__(self):
         return f"{self.new_hire_id} - {self.employee}"
+    
+
+
+class BaseUser(AbstractBaseUser, PermissionsMixin):
+    email = models.EmailField(unique=True)
+    username = models.CharField(max_length=30, null=True, blank=True)
+    is_active = models.BooleanField(default=True)
+    is_staff = models.BooleanField(default=False)
+    user_type = models.CharField(max_length=20, default="generic")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    USERNAME_FIELD = "email"
+    REQUIRED_FIELDS = []
+
+    def __str__(self):
+        return f"{self.user_type.capitalize()} - {self.email}"
+    
+
+class AdminUser(BaseUser):
+    class Meta:
+        proxy = True
+
+    def save(self, *args, **kwargs):
+        self.user_type = "admin"
+        self.is_staff = True
+        super().save(*args, **kwargs)
+
+
+class WorkerUser(BaseUser):
+    class Meta:
+        proxy = True
+
+    def save(self, *args, **kwargs):
+        self.user_type = "customer"
+        self.is_staff = False
+        super().save(*args, **kwargs)
+
+class UserFactory:
+    @staticmethod
+    def create_user(user_type: str, email: str, password: str, **extra_fields) -> BaseUser:
+        if user_type == "admin":
+            user = AdminUser(email=email, **extra_fields)
+        elif user_type == "customer":
+            user = CustomerUser(email=email, **extra_fields)
+        else:
+            user = BaseUser(email=email, **extra_fields)
+
+        user.set_password(password)
+        user.save()
+        return user
